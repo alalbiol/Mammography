@@ -1,0 +1,4 @@
+train: /home/alalbiol/Data/mamo/ddsm_yolo/training/images
+val: /home/alalbiol/Data/mamo/ddsm_yolo/validation/images
+nc: 2
+names: ['bening', 'malignant']

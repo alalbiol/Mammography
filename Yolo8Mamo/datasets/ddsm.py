@@ -8,6 +8,8 @@ from tqdm import tqdm
 from annotation_utils import read_annotation_image
 import joblib
 
+SHORTES_SIZE = 1696 # both multiple of 32 and appox like dezso 1700x2100
+LONGEST_SIZE = 2112 
 
 def get_case_from_png(fn):    
     case_folder_in = pathlib.Path(fn).parent
@@ -106,12 +108,8 @@ def get_abnormality_class(abnormality):
             return 0
     return 0
     
-def calculate_scale_factor_dezzo(W,H, max_w = 1700, max_h = 2100 ):
-    #2100 largest size
-    #1700 shortest side
-   
+def calculate_scale_factor_dezzo(W,H, max_w = SHORTES_SIZE, max_h = LONGEST_SIZE ):
     
-
     scale_h = max_h / H
     scale_w = max_w / W
     
@@ -119,7 +117,7 @@ def calculate_scale_factor_dezzo(W,H, max_w = 1700, max_h = 2100 ):
 
     return scale     
 
-def letterbox_image(image, max_w=1700, max_H=2100):
+def letterbox_image(image, max_w=SHORTES_SIZE, max_H=LONGEST_SIZE):
     '''resize image with unchanged aspect ratio using padding'''
     
    
@@ -247,7 +245,7 @@ class DDSM(object):
             orig_img = Image.open(annotated_image.image_file)
             orig_img = np.array(orig_img)
             
-            print("Processing: ", annotated_image.image_file.name)
+            #print("Processing: ", annotated_image.image_file.name)
 
             img, scale_factor = process_image_for_yolo(orig_img)
             
