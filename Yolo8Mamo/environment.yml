@@ -1,0 +1,26 @@
+name: Mammo
+channels:
+  - pytorch
+  - nvidia  
+dependencies:
+  - python
+  - jupyter
+  - pytorch
+  - pytorch-cuda=12.1
+  - torchvision
+  - pip
+  - pip:
+    - pillow
+    - matplotlib
+    - pandas
+    - scikit-image
+    - scikit-learn
+    - einops
+    - opencv-python
+    - pydicom
+    - h5py
+    - tqdm
+    - ultralytics
+    - google
+    - protobuf
+  
