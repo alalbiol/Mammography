@@ -244,9 +244,12 @@ class DDSM(object):
         annotated_images = self.all_annotated_cases[case]
         for annotated_image in annotated_images:
             #load image using PIL.Image
-            img = Image.open(annotated_image.image_file)
+            orig_img = Image.open(annotated_image.image_file)
+            orig_img = np.array(orig_img)
+            
+            print("Processing: ", annotated_image.image_file.name)
 
-            img, scale_factor = process_image_for_yolo(img)
+            img, scale_factor = process_image_for_yolo(orig_img)
             
             W, H = img.shape[1], img.shape[0]
             
@@ -304,3 +307,6 @@ if __name__ == "__main__":
     ddsm.generate_Y8_dataset(train_cases, "/tmp/ddsm_yolo/training", parallel=True)
     ddsm.generate_Y8_dataset(val_cases, "/tmp/ddsm_yolo/validation", parallel=True)
     
+    # debug_cases = [case for case in ddsm.cases if "case3161" in case]
+    # print("Debug cases: ", debug_cases)    
+    # ddsm.generate_Y8_dataset(debug_cases, "/tmp/ddsm_yolo/training", parallel=False)
