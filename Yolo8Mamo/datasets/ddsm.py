@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
 import pathlib
 from typing import List, Dict
 from PIL import Image
