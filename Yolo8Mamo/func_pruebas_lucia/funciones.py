@@ -1,3 +1,9 @@
+import numpy as np
+import os
+import globc
+import subprocess
+
+
 def read_lossless_dcm_raw(fname):
     """Read raw image data from lossless dcm."""
     #use the standford cmdline tool to decompress
