@@ -23,6 +23,35 @@ def get_outline_curve(outline):
     return xpos,ypos
 
 
+def read_overlay(fn):
+    """Read ovelay file."""
+    with open(fn) as f:
+        outlines,l_type,ass,subt,patho,n_outl=[],[],[],[],[],[]
+        line = f.readline()
+        while line:        
+            if line.find('TOTAL_ABNORMALITIES')!=-1:
+                n_abn=int(line.split(' ')[1])
+            elif line.find('ABNORMALITY')!=-1:
+                outlines.append([])
+            elif line.find('LESION_TYPE')!=-1:
+                l_type.append(line.split(' ')[1].strip())
+            elif line.find('ASSESSMENT')!=-1:
+                ass.append(int(line.split(' ')[1]))
+            elif line.find('SUBTLETY')!=-1:
+                subt.append(int(line.split(' ')[1]))
+            elif line.find('PATHOLOGY')!=-1:
+                patho.append(line.split(' ')[1].strip())
+            elif line.find('TOTAL_OUTLINES')!=-1:
+                n_outl.append(int(line.split(' ')[1]))
+            elif line.find('BOUNDARY')!=-1:
+                line=f.readline()
+                outline_str=list(map(int,line.strip().split()[:-1]))
+                outlines[-1].append(outline_str)
+            line=f.readline()
+    
+    return n_abn,n_outl,list(zip(l_type,ass,subt,patho,outlines))
+
+
 
 def create_bbox(overlay):
             
@@ -38,3 +67,7 @@ def create_bbox(overlay):
 
     esquinas = np.array([minx, miny, maxx, maxy])
     return esquinas
+
+def has_overlay(image_path):
+    overlay_path = image_path.with_suffix('.OVERLAY')
+    return overlay_path.exists()
