@@ -31,7 +31,7 @@ def convert_case_npy(case_in_path, case_out_path):
 
     
 def convert_image(jpeg_image, case_out_path):
-    """Convert one image."""
+    """Convert one image to npy."""
     #get filenames
     folder = jpeg_image.parent
     ics_fname= list(folder.glob('*.ics'))[0]

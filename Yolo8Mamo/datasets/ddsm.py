@@ -265,9 +265,7 @@ class DDSM(object):
                     height = abnormality['bounding_box'][7] * scale_factor/ H 
                 
                     f.write(f"{object_class} {center_x} {center_y} {width} {height}\n")
-
-
-    
+ 
     def generate_Y8_dataset(self, cases, output_folder, parallel = False):
         output_folder = pathlib.Path(output_folder)
         if not output_folder.exists():
