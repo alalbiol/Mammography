@@ -1,0 +1,42 @@
+General:
+  source_root: /home/alalbiol/Programacion/mammography/mamo_holistic
+Datamodule:
+  split_csv: resouces/ddsm/DDSM_train.csv
+  ddsm_annotations: resouces/ddsm/ddsm_annotations.json
+  ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_1152x896
+  eval_patches_root: /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_224
+  batch_size: 32
+  num_workers: 8
+  pin_memory: True
+
+Logger:
+  type: wandb
+  project: ddsm_patch
+  name: patches_224
+  save_dir: /tmp/logs/ddsm_patch_224
+
+LightningModule:
+  learning_rate: 0.001
+  
+
+
+
+Trainer:
+  max_epochs: 100
+
+
+Callbacks:
+  EarlyStopping:
+    monitor: val_loss
+    mode: min
+    patience: 10
+    verbose: True
+  ModelCheckpoint:
+    monitor: val_loss
+    mode: min
+    save_top_k: 1
+    dirpath: /tmp/logs/ddsm_patch_224
+    filename: best_model
+    verbose: True
+  
+  
