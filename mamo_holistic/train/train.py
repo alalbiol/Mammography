@@ -169,16 +169,16 @@ class DDSMPatchClassifier(pl.LightningModule):
         f1_per_class = 2 * (precision_per_class * recall_per_class) / (precision_per_class + recall_per_class + 1e-10)
 
         # Log per-class metrics at epoch end
-        for i in range(self.num_classes):
+        for i in range(1,self.num_classes):
             class_name = self.idx_to_class[i]
             self.log(f"val/precision_class_{class_name}", precision_per_class[i])
             self.log(f"val/recall_class_{class_name}", recall_per_class[i])
             self.log(f"val/f1_class_{class_name}", f1_per_class[i])
 
         # Calculate and log macro average
-        macro_precision = precision_per_class.mean()
-        macro_recall = recall_per_class.mean()
-        macro_f1 = f1_per_class.mean()
+        macro_precision = precision_per_class[1:].mean()
+        macro_recall = recall_per_class[1:].mean()
+        macro_f1 = f1_per_class[1:].mean()
 
         self.log("val/macro_precision", macro_precision, prog_bar=True)
         self.log("val/macro_recall", macro_recall, prog_bar=True)
