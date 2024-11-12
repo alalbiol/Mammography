@@ -24,8 +24,14 @@ LightningModule:
   learning_rate: 0.001
   optimizer_type: adam
   num_classes: 5
-  subset_train_size: 1000
-  subset_val_size: 100
+  #subset_train_size: 1000
+  #subset_val_size: 100
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_options:
+    mode: min
+    factor: 0.1
+    patience: 5
+    min_lr: 1e-8
 
 Trainer:
   max_epochs: 100
@@ -35,8 +41,10 @@ Callbacks:
   EarlyStopping:
     monitor: val_loss
     mode: min
-    patience: 10
+    patience: 20
     verbose: True
+
+  
   ModelCheckpoint:
     monitor: val_loss
     mode: min

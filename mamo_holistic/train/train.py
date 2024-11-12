@@ -4,6 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms, datasets, models
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torchmetrics
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -11,6 +12,8 @@ from pytorch_lightning.loggers import WandbLogger
 import argparse
 import yaml
 import wandb
+import matplotlib.pyplot as plt
+import numpy as np
 
 import sys
 
@@ -32,6 +35,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.optimizer_type = get_parameter(config, ["LightningModule", "optimizer_type"])
         self.learning_rate = get_parameter(config, ["LightningModule", "learning_rate"])
         self.optimizer_options = get_parameter(config, ["LightningModule", "optimizer_options"], default={})
+        self.lr_scheduler = get_parameter(config, ["LightningModule", "lr_scheduler"], default=None)
+        self.lr_scheduler_options = get_parameter(config, ["LightningModule", "lr_scheduler_options"], default={})
 
         # Save hyperparameters
         self.save_hyperparameters({
@@ -73,11 +78,27 @@ class DDSMPatchClassifier(pl.LightningModule):
         
     def configure_optimizers(self): # called by the trainer
         if self.optimizer_type.lower() == "adam":
-            return torch.optim.Adam(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
+            optimizer =  torch.optim.Adam(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
         elif self.optimizer_type.lower() == "sgd":
-            return torch.optim.SGD(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
+            optimizer =  torch.optim.SGD(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
         else:
             raise NotImplementedError(f"Unknown optimizer {self.optimizer}")
+        
+        
+        if self.lr_scheduler is not None:
+            print("Using LR Scheduler")
+            if self.lr_scheduler == "ReduceLROnPlateau":            
+                # Set up ReduceLROnPlateau scheduler
+                scheduler = {
+                    'scheduler': ReduceLROnPlateau(optimizer, **self.lr_scheduler_options),
+                    'monitor': 'val_loss',  # Monitors validation loss
+                    'interval': 'epoch',
+                    'frequency': 1
+                }
+        else:
+            return optimizer            
+        
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
         
 
 
@@ -92,13 +113,10 @@ class DDSMPatchClassifier(pl.LightningModule):
         loss = F.cross_entropy(logits, y)
         
         preds = torch.argmax(logits, dim=1)
-        
-        acc = (preds == y).float().mean() # global accuracy
-        
-        acc2 = self.train_accuracy(preds, y)
+                
+        acc = self.train_accuracy(preds, y)
 
-        self.log("train_acc", acc, prog_bar=True) 
-        self.log("train_acc2", acc2, prog_bar=True)       
+        self.log("train_acc", acc, prog_bar=True)       
         self.log("train_loss", loss)
         return loss
     
@@ -153,9 +171,9 @@ class DDSMPatchClassifier(pl.LightningModule):
         # Log per-class metrics at epoch end
         for i in range(self.num_classes):
             class_name = self.idx_to_class[i]
-            self.log(f"val/precision_class_{class_name}", precision_per_class[i], prog_bar=True)
-            self.log(f"val/recall_class_{class_name}", recall_per_class[i], prog_bar=True)
-            self.log(f"val/f1_class_{class_name}", f1_per_class[i], prog_bar=True)
+            self.log(f"val/precision_class_{class_name}", precision_per_class[i])
+            self.log(f"val/recall_class_{class_name}", recall_per_class[i])
+            self.log(f"val/f1_class_{class_name}", f1_per_class[i])
 
         # Calculate and log macro average
         macro_precision = precision_per_class.mean()
@@ -174,7 +192,9 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         self.val_confusion_matrix.compute()
         fig, ax = self.val_confusion_matrix.plot()
-        #self.log("val confusion_matrix", wandb.Image(fig))
+                
+        experiment = self.logger.experiment
+        experiment.log({"val confusion_matrix": wandb.Image(fig)})
         self.val_confusion_matrix.reset()
     
     
