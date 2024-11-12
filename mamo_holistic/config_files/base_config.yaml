@@ -43,8 +43,8 @@ Callbacks:
     mode: min
     patience: 20
     verbose: True
-
-  
+  LearningRateMonitor:
+    logging_interval: 'epoch'
   ModelCheckpoint:
     monitor: val_loss
     mode: min
