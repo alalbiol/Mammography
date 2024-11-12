@@ -510,8 +510,9 @@ def sample_positive_bb(roi_outline, patch_size=256,
         if nb_try >= 1000:
             pos_cutoff -= .05
             
-            print(f"Sample positive BB: Nb of trials reached maximum, decrease overlap cutoff by 0.05: {pos_cutoff}:0.2f, ({xmax-xmin},{ymax-ymin})")
-            sys.stdout.flush()
+            if verbose:
+                print(f"Sample positive BB: Nb of trials reached maximum, decrease overlap cutoff by 0.05: {pos_cutoff}:0.2f, ({xmax-xmin},{ymax-ymin})")
+                sys.stdout.flush()
             nb_try = 0
             if pos_cutoff <= .0:
                 raise Exception("overlap cutoff becomes non-positive, "
