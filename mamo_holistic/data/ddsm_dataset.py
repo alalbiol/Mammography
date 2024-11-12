@@ -11,6 +11,7 @@ import numpy as np
 import cv2
 import pytorch_lightning as pl
 from utils.load_config import  get_parameter
+import gzip
 
 
 
@@ -435,7 +436,7 @@ class DDSM_Patch_Dataset(Dataset):
         self.return_mask = return_mask
         self.patch_sampler = patch_sampler
         
-        self.ddsm_annotations = self.load_annotations(split_csv, root_dir, ddsm_annotations)
+        self.ddsm_annotations = self.load_annotations(split_csv, ddsm_annotations)
         
         if subset_size is not None:
             self.ddsm_annotations = self.ddsm_annotations.sample(subset_size)
@@ -460,11 +461,18 @@ class DDSM_Patch_Dataset(Dataset):
         return self.ddsm_annotations['label'].values
         
 
-    def load_annotations(self, split_csv, root_dir,  annotations_file):
+    def load_annotations(self, split_csv,  annotations_file):
         
         split_images = pd.read_csv(split_csv)
         
-        annotations = pd.read_json('../resources/ddsm/ddsm_annotations.json', orient='records', lines=True)
+        
+        if str(annotations_file).endswith('.json'):
+            annotations = pd.read_json(annotations_file, orient='records', lines=True)
+        else:
+            with gzip.open(annotations_file, 'rt', encoding='utf-8') as f:
+                annotations = pd.read_json(f, orient='records', lines=True)
+
+
         print("Number of annotations: ", len(annotations))
         
         
