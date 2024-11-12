@@ -4,6 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms, datasets, models
+import tochmetrics
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
@@ -27,7 +28,7 @@ class ImageClassifier(pl.LightningModule):
         
           # Fetch hyperparameters from config
         self.num_classes = get_parameter(config, ["LightningModule", "num_classes"])
-        self.optimizer = get_parameter(config, ["LightningModule", "optimizer"])
+        self.optimizer_type = get_parameter(config, ["LightningModule", "optimizer_type"])
         self.learning_rate = get_parameter(config, ["LightningModule", "learning_rate"])
         self.optimizer_options = get_parameter(config, ["LightningModule", "optimizer_options"])
 
@@ -39,56 +40,124 @@ class ImageClassifier(pl.LightningModule):
             'optimizer_options': self.optimizer_options
         })
         
-        
         # Define a pre-trained model (ResNet18 in this case)
         self.model = models.resnet18( weights=models.ResNet18_Weights.DEFAULT)
         # Modify the last layer to match the number of classes
         self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
         
-        self.optimizer = self.create_optimizer()
+        # Metrics initialization
+        self.train_accuracy = torchmetrics.Accuracy(num_classes=num_classes, average='macro')
+        self.val_accuracy = torchmetrics.Accuracy(num_classes=num_classes, average='macro')
+        # self.val_precision = torchmetrics.Precision(num_classes=num_classes, average='macro')
+        # self.val_recall = torchmetrics.Recall(num_classes=num_classes, average='macro')
+        # self.val_f1 = torchmetrics.F1Score(num_classes=num_classes, average='macro')
         
         
-        
-    def create_optimizer(self):
-        if self.optimizer.lower() == "adam":
+    def configure_optimizers(self): # called by the trainer
+        if self.optimizer_type.lower() == "adam":
             return torch.optim.Adam(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
-        elif self.optimizer.lower() == "sgd":
+        elif self.optimizer_type.lower() == "sgd":
             return torch.optim.SGD(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
         else:
             raise NotImplementedError(f"Unknown optimizer {self.optimizer}")
         
+    def create_idx_to_class(self, class_to_idx):
+        class_names = ['NORMAL',
+            'MASS_BENIGN',
+            'CALCIFICATION_BENIGN',
+            'MASS_MALIGNANT',
+            'CALCIFICATION_MALIGNANT',
+        ]
+        self.class_to_idx = {class_name: i for i, class_name in enumerate(class_names)}
+        self.idx_to_class = {i: class_name for i, class_name in enumerate(class_names)}
+
 
     def forward(self, x):
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
+        x, y, _ = batch # (image, labels, mask)
+        logits = self(x)
+        loss = F.cross_entropy(logits, y)
+        
+        preds = torch.argmax(logits, dim=1)
+        
+        acc = (preds == y).float().mean() # global accuracy
+        
+        acc2 = self.train_accuracy(preds, y)
+
+        self.log("train_acc", acc, prog_bar=True) 
+        self.log("train_acc2", acc2, prog_bar=True)       
         self.log("train_loss", loss)
         return loss
     
     def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        acc = (y_hat.argmax(dim=1) == y).float().mean()
+        x, y, _ = batch
+        logits = self(x)
+        loss = F.cross_entropy(logits, y)
+        
+        preds = torch.argmax(logits, dim=1)
+
+        # Update confusion matrix components
+        for i in range(self.num_classes):
+            self.tp[i] += torch.sum((preds == i) & (y == i)).item()  # True positives
+            self.fp[i] += torch.sum((preds == i) & (y != i)).item()  # False positives
+            self.fn[i] += torch.sum((preds != i) & (y == i)).item()  # False negatives
+            self.total[i] += torch.sum(y == i).item()  # Total instances of class i
+
+        # Log the loss (optional)
+        self.log("val/loss", loss, prog_bar=True)
+        
+        
+        acc = (preds == y).float().mean() # global accuracy
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", acc, prog_bar=True)
         return loss
     
-    def test_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        acc = (y_hat.argmax(dim=1) == y).float().mean()
-        self.log("test_loss", loss)
-        self.log("test_acc", acc)
-        return loss
+    # def test_step(self, batch, batch_idx):
+    #     x, y = batch
+    #     y_hat = self(x)
+    #     loss = F.cross_entropy(y_hat, y)
+    #     acc = (y_hat.argmax(dim=1) == y).float().mean()
+    #     self.log("test_loss", loss)
+    #     self.log("test_acc", acc)
+    #     return loss
     
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
-        return optimizer
+    def training_epoch_end(self, outputs):
+        # log train accuracy
+        self.log("train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
+        self.train_accuracy.reset()
+        
+    
+    def validation_epoch_end(self, outputs):
+        # Compute precision, recall, and f1 for each class
+        precision_per_class = self.tp / (self.tp + self.fp + 1e-10)  # Add small epsilon to avoid division by zero
+        recall_per_class = self.tp / (self.tp + self.fn + 1e-10)
+        f1_per_class = 2 * (precision_per_class * recall_per_class) / (precision_per_class + recall_per_class + 1e-10)
+
+        # Log per-class metrics at epoch end
+        for i in range(self.num_classes):
+            class_name = self.idx_to_class[i]
+            self.log(f"val/precision_class_{class_name}", precision_per_class[i], prog_bar=True)
+            self.log(f"val/recall_class_{class_name}", recall_per_class[i], prog_bar=True)
+            self.log(f"val/f1_class_{class_name}", f1_per_class[i], prog_bar=True)
+
+        # Calculate and log macro average
+        macro_precision = precision_per_class.mean()
+        macro_recall = recall_per_class.mean()
+        macro_f1 = f1_per_class.mean()
+
+        self.log("val/macro_precision", macro_precision, prog_bar=True)
+        self.log("val/macro_recall", macro_recall, prog_bar=True)
+        self.log("val/macro_f1", macro_f1, prog_bar=True)
+
+        # Reset metrics to avoid accumulation over multiple epochs
+        self.tp.zero_()
+        self.fp.zero_()
+        self.fn.zero_()
+        self.total.zero_()
+    
+    
 
 def get_logger(config):
     # Check if the logger is set to WandB
