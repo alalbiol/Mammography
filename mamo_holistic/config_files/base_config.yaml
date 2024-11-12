@@ -1,13 +1,18 @@
 General:
-  source_root: /home/alalbiol/Programacion/mammography/mamo_holistic
+  source_root: /home/alalbiol/Programacion/Mammography/mamo_holistic
+  gpu_type: "RTX 3090" 
+
 Datamodule:
-  split_csv: resouces/ddsm/DDSM_train.csv
-  ddsm_annotations: resouces/ddsm/ddsm_annotations.json
+  patch_size: 224
+  convert_to_RGB: True
+  split_csv: resources/ddsm/DDSM_train.csv
+  ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
   ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_1152x896
   eval_patches_root: /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_224
   batch_size: 32
-  num_workers: 8
+  num_workers: 16
   pin_memory: True
+
 
 Logger:
   type: wandb
@@ -18,6 +23,9 @@ Logger:
 LightningModule:
   learning_rate: 0.001
   optimizer_type: adam
+  num_classes: 5
+  subset_train_size: 1000
+  subset_val_size: 100
 
 Trainer:
   max_epochs: 100

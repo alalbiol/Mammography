@@ -427,6 +427,7 @@ class PatchSampler(object):
 
 class DDSM_Patch_Dataset(Dataset):
     def __init__(self, split_csv, ddsm_annotations, root_dir, 
+                 convert_to_rgb = True,
                  return_mask=False,
                  patch_sampler = None,
                  subset_size = None):
@@ -435,6 +436,7 @@ class DDSM_Patch_Dataset(Dataset):
         self.root_dir = pathlib.Path(root_dir)
         self.return_mask = return_mask
         self.patch_sampler = patch_sampler
+        self.convert_to_rgb = convert_to_rgb
         
         self.ddsm_annotations = self.load_annotations(split_csv, ddsm_annotations)
         
@@ -566,6 +568,9 @@ class DDSM_Patch_Dataset(Dataset):
             mask = None
         
         if self.patch_sampler is None:
+            if self.convert_to_rgb:
+                image = np.stack((image,)*3, axis=-1)
+            
             return image, abnormality, mask
         
         if self.ddsm_annotations.iloc[idx]['outline'] is not None:
@@ -580,13 +585,20 @@ class DDSM_Patch_Dataset(Dataset):
         
         image_patches = np.array(image_patches)
         
+        image_patches = np.expand_dims(image_patches, axis=1)
+        if self.convert_to_rgb:
+            image_patches = np.repeat(image_patches, 3, axis=1)
+        
+
         if mask is not None:
             mask_patches = np.array(mask_patches)
         else:
             mask_patches = None
         labels_idx = np.array(labels_idx)
         
-        return image_patches, labels_idx, mask_patches
+        if self.return_mask:
+            return image_patches, labels_idx, mask_patches
+        return image_patches, labels_idx
         
         
 
@@ -599,13 +611,14 @@ class ConvertToFloat32:
 
 
 class DDSM_patch_eval(datasets.ImageFolder):
-    def __init__(self, root, transform=None, return_mask = False, subset_size = None):
+    def __init__(self, root, transform=None, convert_to_rgb = True, return_mask = False, subset_size = None):
         # Call the parent constructor
         #create lambda transform function to cast to float32
         
         
         if transform is None:
             transform = transforms.Compose([ConvertToFloat32()])
+        self.convert_to_rgb = convert_to_rgb
         self.return_mask = return_mask
             
         def custom_loader(path):
@@ -660,7 +673,7 @@ class DDSM_patch_eval(datasets.ImageFolder):
             self.targets[k] = sample_class
             
     def __len__(self):
-        return len(self.ddsm_annotations)     
+        return len(self.samples)     
             
     def __getitem__(self, index):
         path, target = self.samples[index]
@@ -668,6 +681,9 @@ class DDSM_patch_eval(datasets.ImageFolder):
         
         if self.transform is not None:
             sample = self.transform(sample)
+            
+        if self.convert_to_rgb:
+            sample = sample.repeat(3, 1, 1)
         
         if self.return_mask:
             mask_path = path.replace('_img.png', '_mask.png')
@@ -676,19 +692,24 @@ class DDSM_patch_eval(datasets.ImageFolder):
                 mask = self.transform(mask)
             return sample, target, mask
         else:
-            return sample, target, None
+            return sample, target
         
         
 def collate_fn(batch):
     # Unzip the batch into two lists: patch tensors and label tensors
-    patch_images, patch_labels, mask_patches = zip(*batch)
+    if len(batch[0]) == 2:
+        patch_images, patch_labels = zip(*batch)
+        mask_patches = None
+    else:
+        patch_images, patch_labels, mask_patches = zip(*batch)
     
     # concatentate all patch tensors along the first dimension (n_all_patches)
     patch_images = np.concatenate(patch_images, axis=0)
     
     
-    if mask_patches[0] is not None:
+    if mask_patches is not None:
         mask_patches = np.concatenate(mask_patches, axis=0)
+        mask_patches = torch.tensor(mask_patches, dtype=torch.uint8)
         
     patch_labels = np.concatenate(patch_labels, axis=0) 
     
@@ -696,28 +717,24 @@ def collate_fn(batch):
         patch_images = torch.tensor(patch_images, dtype=torch.float32) / 255.0
     else:
         patch_images = torch.tensor(patch_images, dtype=torch.float32)
-    # add channel dimension
-    patch_images = patch_images.unsqueeze(1)
-    
-    if mask_patches[0] is not None:
-        mask_patches = torch.tensor(mask_patches, dtype=torch.uint8)
-    else:
-        mask_patches = None
         
     patch_labels = torch.tensor(patch_labels, dtype=torch.long)
     
-    return patch_images, patch_labels, mask_patches
+    if mask_patches is not None:
+        return patch_images, patch_labels, mask_patches
+    return patch_images, patch_labels
 
 
 
-def get_train_dataloader(split_csv, ddsm_annotations, root_dir, batch_size=32, shuffle=True, num_workers=4, return_mask=False, subset_size=None):
+def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batch_size=32, 
+                         convert_to_rgb = True, shuffle=True, num_workers=4, return_mask=False, subset_size=None):
     
     
     affine_transform = RandomAffineTransform()
     #affine_transform = IdentityTransform()
 
 
-    patch_sampler = PatchSampler(512, affine_transform=affine_transform,
+    patch_sampler = PatchSampler(patch_size, affine_transform=affine_transform,
                                 n_positive_crops = 1, 
                                 n_hard_negative_crop=1,
                                 n_blob_crops=1,
@@ -725,6 +742,7 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, batch_size=32, s
 
     dataset = DDSM_Patch_Dataset(split_csv, ddsm_annotations, root_dir, 
                                 return_mask= return_mask, patch_sampler = patch_sampler,
+                                convert_to_rgb = convert_to_rgb,
                                 subset_size = subset_size)
 
     
@@ -732,8 +750,8 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, batch_size=32, s
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn)
     return dataloader
 
-def get_test_dataloader(patches_root, batch_size=32, return_mask=False, subset_size=None):
-    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, subset_size=subset_size)
+def get_test_dataloader(patches_root, batch_size=32, return_mask=False, convert_to_rgb = True, subset_size=None):
+    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, convert_to_rgb= convert_to_rgb, subset_size=subset_size)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     return dataloader
 
@@ -743,14 +761,23 @@ def get_test_dataloader(patches_root, batch_size=32, return_mask=False, subset_s
 class DDSMPatchDataModule(pl.LightningDataModule):
     def __init__(self, config):
         super().__init__()
-        self.split_csv = get_parameter(config, ['Datamodule', 'split_csv'])
-        self.ddsm_annotations = get_parameter(config, ['Datamodule', 'ddsm_annotations'])
+        self.patch_size = get_parameter(config, ['Datamodule', 'patch_size'])
+        self.convert_to_rgb = get_parameter(config, ["Datamodule", "convert_to_rgb"], default=True)
         self.ddsm_root = get_parameter(config, ['Datamodule', 'ddsm_root'])
         self.batch_size = get_parameter(config, ['Datamodule', 'batch_size'])
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
         self.eval_patches_root = get_parameter(config, ['Datamodule', 'eval_patches_root'])
         self.subset_size_train = get_parameter(config, ['Datamodule', 'subset_size_train'], default=None)
         self.subset_size_test = get_parameter(config, ['Datamodule', 'subset_size_test'], default=None)
+        self.source_root = get_parameter(config, ['General', 'source_root'], default=None)
+        self.source_root = pathlib.Path(self.source_root) if self.source_root is not None else None
+        
+        self.split_csv = get_parameter(config, ['Datamodule', 'split_csv'])
+        self.split_csv = self.source_root / self.split_csv if self.source_root is not None else self.split_csv
+        self.ddsm_annotations = get_parameter(config, ['Datamodule', 'ddsm_annotations'])
+        self.ddsm_annotations = self.source_root / self.ddsm_annotations if self.source_root is not None else self.ddsm_annotations
+        
+        assert str(self.patch_size) in str(self.eval_patches_root), "eval_patches should be of the same size as the training patches"
         
         
 
@@ -769,12 +796,15 @@ class DDSMPatchDataModule(pl.LightningDataModule):
         return get_train_dataloader(self.split_csv, 
                                     self.ddsm_annotations, 
                                     self.ddsm_root, 
+                                    patch_size=self.patch_size,
                                     batch_size=self.batch_size, 
+                                    convert_to_rgb=self.convert_to_rgb,
                                     shuffle=True, num_workers=self.num_workers, 
                                     return_mask=False, subset_size=self.subset_size_train)
     
     def val_dataloader(self):
         return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, 
+                                   convert_to_rgb=self.convert_to_rgb,
                                    return_mask=False, subset_size=self.subset_size_test)
         
     

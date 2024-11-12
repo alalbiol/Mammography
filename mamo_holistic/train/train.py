@@ -4,7 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms, datasets, models
-import tochmetrics
+import torchmetrics
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
@@ -23,7 +23,7 @@ from utils.load_config import load_config, get_parameter
 from data.ddsm_dataset import DDSMPatchDataModule
 
 # Define the Image Classification Model using PyTorch Lightning
-class ImageClassifier(pl.LightningModule):
+class DDSMPatchClassifier(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         
@@ -31,12 +31,12 @@ class ImageClassifier(pl.LightningModule):
         self.num_classes = get_parameter(config, ["LightningModule", "num_classes"])
         self.optimizer_type = get_parameter(config, ["LightningModule", "optimizer_type"])
         self.learning_rate = get_parameter(config, ["LightningModule", "learning_rate"])
-        self.optimizer_options = get_parameter(config, ["LightningModule", "optimizer_options"])
+        self.optimizer_options = get_parameter(config, ["LightningModule", "optimizer_options"], default={})
 
         # Save hyperparameters
         self.save_hyperparameters({
             'num_classes': self.num_classes,
-            'optimizer': self.optimizer,
+            'optimizer': self.optimizer_type,
             'learning_rate': self.learning_rate,
             'optimizer_options': self.optimizer_options
         })
@@ -47,24 +47,19 @@ class ImageClassifier(pl.LightningModule):
         self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
         
         # Metrics initialization
-        self.train_accuracy = torchmetrics.Accuracy(num_classes=num_classes, average='macro')
-        self.val_accuracy = torchmetrics.Accuracy(num_classes=num_classes, average='macro')
-        self.val_confusion_matrix = torchmetrics.ConfusionMatrix(num_classes=num_classes)
+        self.train_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
+        self.val_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
+        self.val_confusion_matrix = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=self.num_classes)
+        
+        self.tp = torch.zeros(self.num_classes)
+        self.fp = torch.zeros(self.num_classes)
+        self.fn = torch.zeros(self.num_classes)
+        self.total = torch.zeros(self.num_classes) 
         
         # self.val_precision = torchmetrics.Precision(num_classes=num_classes, average='macro')
         # self.val_recall = torchmetrics.Recall(num_classes=num_classes, average='macro')
         # self.val_f1 = torchmetrics.F1Score(num_classes=num_classes, average='macro')
         
-        
-    def configure_optimizers(self): # called by the trainer
-        if self.optimizer_type.lower() == "adam":
-            return torch.optim.Adam(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
-        elif self.optimizer_type.lower() == "sgd":
-            return torch.optim.SGD(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
-        else:
-            raise NotImplementedError(f"Unknown optimizer {self.optimizer}")
-        
-    def create_idx_to_class(self, class_to_idx):
         class_names = ['NORMAL',
             'MASS_BENIGN',
             'CALCIFICATION_BENIGN',
@@ -74,12 +69,25 @@ class ImageClassifier(pl.LightningModule):
         self.class_to_idx = {class_name: i for i, class_name in enumerate(class_names)}
         self.idx_to_class = {i: class_name for i, class_name in enumerate(class_names)}
 
+       
+        
+    def configure_optimizers(self): # called by the trainer
+        if self.optimizer_type.lower() == "adam":
+            return torch.optim.Adam(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
+        elif self.optimizer_type.lower() == "sgd":
+            return torch.optim.SGD(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
+        else:
+            raise NotImplementedError(f"Unknown optimizer {self.optimizer}")
+        
+
 
     def forward(self, x):
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
-        x, y, _ = batch # (image, labels, mask)
+        x = batch[0]
+        y = batch[1]
+        
         logits = self(x)
         loss = F.cross_entropy(logits, y)
         
@@ -95,7 +103,9 @@ class ImageClassifier(pl.LightningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
-        x, y, _ = batch
+        x = batch[0]
+        y = batch[1]
+        
         logits = self(x)
         loss = F.cross_entropy(logits, y)
         
@@ -128,13 +138,13 @@ class ImageClassifier(pl.LightningModule):
     #     self.log("test_acc", acc)
     #     return loss
     
-    def training_epoch_end(self, outputs):
+    def on_training_epoch_end(self, outputs):
         # log train accuracy
         self.log("train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
         self.train_accuracy.reset()
         
     
-    def validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self):
         # Compute precision, recall, and f1 for each class
         precision_per_class = self.tp / (self.tp + self.fp + 1e-10)  # Add small epsilon to avoid division by zero
         recall_per_class = self.tp / (self.tp + self.fn + 1e-10)
@@ -164,7 +174,7 @@ class ImageClassifier(pl.LightningModule):
         
         self.val_confusion_matrix.compute()
         fig, ax = self.val_confusion_matrix.plot()
-        self.log({"val confusion_matrix": wandb.Image(fig)})
+        #self.log("val confusion_matrix", wandb.Image(fig))
         self.val_confusion_matrix.reset()
     
     
@@ -214,13 +224,17 @@ if __name__ == "__main__":
 
     # Load configuration from YAML file
     config = load_config(args.config_file)
+    
+    GPU_TYPE = get_parameter(config, ["General", "gpu_type"],"None")
+    if GPU_TYPE == "RTX 3090":
+        torch.set_float32_matmul_precision('medium') # recomended for RTX 3090
    
     
     
     # Set up model, data module, logger, and checkpoint callback
     
 
-    model = ImageClassifier(config=config)
+    model = DDSMPatchClassifier(config=config)
     data_module = DDSMPatchDataModule(config=config)
     logger = get_logger(config)
 
@@ -234,7 +248,7 @@ if __name__ == "__main__":
         max_epochs=max_epochs,
         logger=logger,
         callbacks= callbacks,
-        gpus=1 if torch.cuda.is_available() else None,
+        accelerator = 'gpu' if torch.cuda.is_available() else None,
     )
     
     # Fit the model
