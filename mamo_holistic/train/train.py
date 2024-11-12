@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import argparse
 import yaml
+import wandb
 
 import sys
 
@@ -48,6 +49,8 @@ class ImageClassifier(pl.LightningModule):
         # Metrics initialization
         self.train_accuracy = torchmetrics.Accuracy(num_classes=num_classes, average='macro')
         self.val_accuracy = torchmetrics.Accuracy(num_classes=num_classes, average='macro')
+        self.val_confusion_matrix = torchmetrics.ConfusionMatrix(num_classes=num_classes)
+        
         # self.val_precision = torchmetrics.Precision(num_classes=num_classes, average='macro')
         # self.val_recall = torchmetrics.Recall(num_classes=num_classes, average='macro')
         # self.val_f1 = torchmetrics.F1Score(num_classes=num_classes, average='macro')
@@ -97,6 +100,8 @@ class ImageClassifier(pl.LightningModule):
         loss = F.cross_entropy(logits, y)
         
         preds = torch.argmax(logits, dim=1)
+        
+        self.val_confusion_matrix(preds, y)
 
         # Update confusion matrix components
         for i in range(self.num_classes):
@@ -156,6 +161,11 @@ class ImageClassifier(pl.LightningModule):
         self.fp.zero_()
         self.fn.zero_()
         self.total.zero_()
+        
+        self.val_confusion_matrix.compute()
+        fig, ax = self.val_confusion_matrix.plot()
+        self.log({"val confusion_matrix": wandb.Image(fig)})
+        self.val_confusion_matrix.reset()
     
     
 
