@@ -427,7 +427,8 @@ class PatchSampler(object):
 class DDSM_Patch_Dataset(Dataset):
     def __init__(self, split_csv, ddsm_annotations, root_dir, 
                  return_mask=False,
-                 patch_sampler = None):
+                 patch_sampler = None,
+                 subset_size = None):
         
         self.split_csv = split_csv
         self.root_dir = pathlib.Path(root_dir)
@@ -435,6 +436,10 @@ class DDSM_Patch_Dataset(Dataset):
         self.patch_sampler = patch_sampler
         
         self.ddsm_annotations = self.load_annotations(split_csv, root_dir, ddsm_annotations)
+        
+        if subset_size is not None:
+            self.ddsm_annotations = self.ddsm_annotations.sample(subset_size)
+        
         #class_names = self.ddsm_annotations['label'].unique()
         class_names = ['NORMAL',
             'MASS_BENIGN',
@@ -586,7 +591,7 @@ class ConvertToFloat32:
 
 
 class DDSM_patch_eval(datasets.ImageFolder):
-    def __init__(self, root, transform=None, return_mask = False):
+    def __init__(self, root, transform=None, return_mask = False, subset_size = None):
         # Call the parent constructor
         #create lambda transform function to cast to float32
         
@@ -606,6 +611,10 @@ class DDSM_patch_eval(datasets.ImageFolder):
         
         # If a remap dictionary is provided, remap the class_to_idx
         self.remap_targets()
+        
+        if subset_size is not None:
+            self.samples = self.samples[:subset_size]
+            self.targets = self.targets[:subset_size]
 
     
     def select_images(self):
@@ -642,7 +651,8 @@ class DDSM_patch_eval(datasets.ImageFolder):
             self.samples[k] = (path, sample_class)    
             self.targets[k] = sample_class
             
-            
+    def __len__(self):
+        return len(self.ddsm_annotations)     
             
     def __getitem__(self, index):
         path, target = self.samples[index]
@@ -692,7 +702,7 @@ def collate_fn(batch):
 
 
 
-def get_train_dataloader(split_csv, ddsm_annotations, root_dir, batch_size=32, shuffle=True, num_workers=4, return_mask=False):
+def get_train_dataloader(split_csv, ddsm_annotations, root_dir, batch_size=32, shuffle=True, num_workers=4, return_mask=False, subset_size=None):
     
     
     affine_transform = RandomAffineTransform()
@@ -706,15 +716,16 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, batch_size=32, s
                                 n_random_crops=1)
 
     dataset = DDSM_Patch_Dataset(split_csv, ddsm_annotations, root_dir, 
-                                return_mask= return_mask, patch_sampler = patch_sampler)
+                                return_mask= return_mask, patch_sampler = patch_sampler,
+                                subset_size = subset_size)
 
     
 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn)
     return dataloader
 
-def get_test_dataloader(patches_root, batch_size=32, return_mask=False):
-    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask)
+def get_test_dataloader(patches_root, batch_size=32, return_mask=False, subset_size=None):
+    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, subset_size=subset_size)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     return dataloader
 
@@ -730,7 +741,8 @@ class DDSMPatchDataModule(pl.LightningDataModule):
         self.batch_size = get_parameter(config, ['Datamodule', 'batch_size'])
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
         self.eval_patches_root = get_parameter(config, ['Datamodule', 'eval_patches_root'])
-        
+        self.subset_size_train = get_parameter(config, ['Datamodule', 'subset_size_train'], default=None)
+        self.subset_size_test = get_parameter(config, ['Datamodule', 'subset_size_test'], default=None)
         
         
 
@@ -750,10 +762,12 @@ class DDSMPatchDataModule(pl.LightningDataModule):
                                     self.ddsm_annotations, 
                                     self.ddsm_root, 
                                     batch_size=self.batch_size, 
-                                    shuffle=True, num_workers=self.num_workers, return_mask=False)
+                                    shuffle=True, num_workers=self.num_workers, 
+                                    return_mask=False, subset_size=self.subset_size_train)
     
     def val_dataloader(self):
-        return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, return_mask=False)
+        return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, 
+                                   return_mask=False, subset_size=self.subset_size_test)
         
     
     def test_dataloader(self):

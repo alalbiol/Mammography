@@ -24,7 +24,7 @@ def load_config(base_file, override_file=None):
     else:
         return base_config
 
-def get_parameter(config, path, mode='warn'):
+def get_parameter(config, path, mode='default', default=None):
     """
     Retrieve a parameter from a nested dictionary.
 
@@ -46,7 +46,9 @@ def get_parameter(config, path, mode='warn'):
         return config
     except KeyError as e:
         # Handle the case where a key is not found
-        if mode == 'warn':
+        if mode == 'default':
+            return default
+        elif mode == 'warn':
             print(f"Warning: Parameter {'->'.join(path)} not found. Default None is returned.")
             return None
         elif mode == 'exit':
