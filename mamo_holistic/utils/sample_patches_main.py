@@ -37,7 +37,31 @@ def overlap_bb_boundary(bb, boundary_points, cutoff=.5):
         return False
     
     return (inter_area/bb_area > cutoff or inter_area/patch_area > cutoff)
+
+
+def overlap_bb_boundary_fast(bb, boundary_points, cutoff=.5):
+    # List of points defining the object boundary
+    object_x_min = boundary_points[:,0].min()
+    object_x_max = boundary_points[:,0].max()
+    object_y_min = boundary_points[:,1].min()
+    object_y_max = boundary_points[:,1].max()
+   
+    # Bounding box coordinates
+    bbox_x_min, bbox_y_min, bbox_x_max, bbox_y_max = bb[0], bb[1], bb[2], bb[3]
     
+
+    # Calculate intersection and union
+    inter_area = (min(object_x_max, bbox_x_max) - max(object_x_min, bbox_x_min)) * (min(object_y_max, bbox_y_max) - max(object_y_min, bbox_y_min))
+    object_area = (object_x_max - object_x_min) * (object_y_max - object_y_min)
+    bbox_area = (bbox_x_max - bbox_x_min) * (bbox_y_max - bbox_y_min)
+    
+    if object_area == 0 or bbox_area == 0:
+        return False
+   
+    
+    return (inter_area/object_area > cutoff or inter_area/bbox_area > cutoff)
+    
+
 
 def point_in_polygon(point, polygon):
     """Check if a point is inside a polygon.
@@ -195,9 +219,9 @@ def sample_patches(img, roi_mask, out_dir, mask_id, bounding_box, patch_size=256
         y = np.random.randint(ry, ry + rh)
         nb_try += 1
         if nb_try >= 1000:
-            print("Nb of trials reached maximum, decrease overlap cutoff by 0.05")
-            sys.stdout.flush()
             pos_cutoff -= .05
+            print(f"Nb of trials reached maximum, decrease overlap cutoff by 0.05: {pos_cutoff}")
+            sys.stdout.flush()
             nb_try = 0
             if pos_cutoff <= .0:
                 raise Exception("overlap cutoff becomes non-positive, "
@@ -484,16 +508,17 @@ def sample_positive_bb(roi_outline, patch_size=256,
         y = np.random.randint(ymin, ymax)
         nb_try += 1
         if nb_try >= 1000:
-            print("Nb of trials reached maximum, decrease overlap cutoff by 0.05")
-            sys.stdout.flush()
             pos_cutoff -= .05
+            
+            print(f"Sample positive BB: Nb of trials reached maximum, decrease overlap cutoff by 0.05: {pos_cutoff}:0.2f, ({xmax-xmin},{ymax-ymin})")
+            sys.stdout.flush()
             nb_try = 0
             if pos_cutoff <= .0:
                 raise Exception("overlap cutoff becomes non-positive, "
                                 "check roi mask input.")
         # import pdb; pdb.set_trace()
         
-        if overlap_bb_boundary([x - patch_size // 2, 
+        if overlap_bb_boundary_fast([x - patch_size // 2, 
                                 y - patch_size // 2, 
                                 x + patch_size // 2,
                                 y + patch_size // 2],  out_line, cutoff=pos_cutoff):
