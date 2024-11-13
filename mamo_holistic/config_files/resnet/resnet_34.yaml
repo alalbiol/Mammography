@@ -1,0 +1,15 @@
+Datamodule:
+  patch_size: 224
+
+Logger:
+  name: model_resnet18_224
+  save_dir: /tmp/logs/model_resnet18_224
+
+
+LightningModule:
+  model_name: resnet18
+
+
+Callbacks:
+  ModelCheckpoint:
+    dirpath: /tmp/logs/model_resnet18_224

@@ -308,15 +308,16 @@ if __name__ == "__main__":
 
 
     # Trainer arguments
-    max_epochs = get_parameter(config, ["Trainer", "max_epochs"], mode="warn")
     callbacks = create_callbacks(config)
     
+    
     # Trainer
+    trainer_kwargs = get_parameter(config, ["Trainer"], mode="default", default={})
     trainer = pl.Trainer(
-        max_epochs=max_epochs,
         logger=logger,
         callbacks= callbacks,
         accelerator = 'gpu' if torch.cuda.is_available() else "cpu",
+        **trainer_kwargs
     )
     
     # Fit the model
