@@ -57,10 +57,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.train_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
         self.val_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
         self.val_confusion_matrix = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=self.num_classes)
+        self.train_confusion_matrix = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=self.num_classes)
         
-        self.val_AUROC_5 = torchmetrics.AUROC(task = "multiclass", num_classes=self.num_classes, average='macro')
-        self.val_AUROC_4 = torchmetrics.AUROC(task = "multiclass", num_classes=self.num_classes-1, average='macro')
-
         
         self.tp = torch.zeros(self.num_classes)
         self.fp = torch.zeros(self.num_classes)
@@ -140,6 +138,9 @@ class DDSMPatchClassifier(pl.LightningModule):
             y = torch.cat((top_labels_bg, y_fg), dim=0)
             
         
+        preds = torch.argmax(logits, dim=1)
+        self.train_confusion_matrix(preds, y)
+        
         loss = F.cross_entropy(logits, y)
 
         self.log("train_acc", acc, prog_bar=True)       
@@ -171,22 +172,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         acc = (preds == y).float().mean() # global accuracy
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", acc, prog_bar=True)
-        
-        # probs = F.softmax(logits, dim=1)
-        # self.val_AUROC_5(probs, y)
-        # self.log("val_AUROC_5", self.val_AUROC_5)
-        
-        # print("probs",probs.shape)
-        # probs_4 = probs[y>0,1:]
-        # labels_4 = y[y>0]-1
-        # print("probs_4",probs_4.shape)
-        # print("labels_4",labels_4.shape)
                 
-        # self.val_AUROC_4(probs_4, labels_4)
-        # self.log("val_AUROC_4", self.val_AUROC_4)
-        # import sys
-        # sys.exit()
-        
         return loss
     
     # def test_step(self, batch, batch_idx):
@@ -202,6 +188,15 @@ class DDSMPatchClassifier(pl.LightningModule):
         # log train accuracy
         self.log("train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
         self.train_accuracy.reset()
+        
+        self.train_confusion_matrix.compute()
+        fig, ax = self.train_confusion_matrix.plot()
+                
+        experiment = self.logger.experiment
+        experiment.log({"train confusion_matrix": wandb.Image(fig)})
+        self.train_confusion_matrix.reset()
+        # close the figure
+        plt.close(fig)
         
     
     def on_validation_epoch_end(self):
@@ -233,11 +228,11 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.total.zero_()
         
         self.val_confusion_matrix.compute()
-        fig, ax = self.val_confusion_matrix.plot()
-                
+        fig, ax = self.val_confusion_matrix.plot()      
         experiment = self.logger.experiment
         experiment.log({"val confusion_matrix": wandb.Image(fig)})
         self.val_confusion_matrix.reset()
+        plt.close(fig)
         
         # val_auroc_5 = self.val_AUROC_5.compute()
         # val_auroc_4 = self.val_AUROC_4.compute()
