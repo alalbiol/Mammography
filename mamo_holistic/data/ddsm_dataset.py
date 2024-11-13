@@ -18,8 +18,8 @@ import gzip
 from utils.sample_patches_main import sample_positive_bb, sample_negative_bb,  sample_hard_negative_bb, sample_blob_negative_bb
 
 class RandomAffineTransform:
-    def __init__(self, angle_range=(-180, 180), shear_range=(-0., 0.), 
-                 scale_range=(0.9, 1.1)):
+    def __init__(self, angle_range=(-180, 180), shear_range=(-0.1, 0.1), 
+                 scale_range=(0.8, 1.2)):
         """
         Initialize the RandomAffineTransform with specified parameters.
 

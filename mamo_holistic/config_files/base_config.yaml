@@ -30,19 +30,19 @@ LightningModule:
   lr_scheduler: ReduceLROnPlateau
   lr_scheduler_options:
     mode: min
-    factor: 0.1
-    patience: 5
+    factor: 0.5
+    patience: 20
     min_lr: 1.e-8
 
 Trainer:
-  max_epochs: 100
+  max_epochs: 200
 
 
 Callbacks:
   EarlyStopping:
     monitor: val_loss
     mode: min
-    patience: 20
+    patience: 60
     verbose: True
   LearningRateMonitor:
     logging_interval: 'epoch'
