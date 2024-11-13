@@ -38,6 +38,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.lr_scheduler = get_parameter(config, ["LightningModule", "lr_scheduler"], default=None)
         self.lr_scheduler_options = get_parameter(config, ["LightningModule", "lr_scheduler_options"], default={})
 
+        assert isinstance(self.lr_scheduler_options['min_lr'],float), "min_lr must be a float"
+
         # Save hyperparameters
         self.save_hyperparameters({
             'num_classes': self.num_classes,
