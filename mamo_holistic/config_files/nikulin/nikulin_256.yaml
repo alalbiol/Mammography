@@ -1,5 +1,6 @@
 Datamodule:
   patch_size: 256
+  eval_patches_root: /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_256
   convert_to_rgb: False
 
 Logger:
