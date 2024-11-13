@@ -1,0 +1,17 @@
+Datamodule:
+  patch_size: 256
+  convert_to_rgb: False
+  batch_size: 128
+
+Logger:
+  name: model_nikulin_256
+  save_dir: /tmp/logs/model_nikulin_256_topk
+
+
+LightningModule:
+  model_name: nikulin
+  n_hard_mining: 64
+
+Callbacks:
+  ModelCheckpoint:
+    dirpath: /tmp/logs/model_nikulin_256_topk

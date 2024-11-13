@@ -38,6 +38,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.optimizer_options = get_parameter(config, ["LightningModule", "optimizer_options"], default={})
         self.lr_scheduler = get_parameter(config, ["LightningModule", "lr_scheduler"], default=None)
         self.lr_scheduler_options = get_parameter(config, ["LightningModule", "lr_scheduler_options"], default={})
+        self.n_hard_mining = get_parameter(config, ["LightningModule", "n_hard_mining"], default=-1)
 
         assert isinstance(self.lr_scheduler_options['min_lr'],float), "min_lr must be a float"
 
@@ -115,11 +116,31 @@ class DDSMPatchClassifier(pl.LightningModule):
         y = batch[1]
         
         logits = self(x)
-        loss = F.cross_entropy(logits, y)
         
         preds = torch.argmax(logits, dim=1)
                 
         acc = self.train_accuracy(preds, y)
+        
+        if self.n_hard_mining > 0:
+            #split logits into two parts. First those with y==0 and second those with y!=0
+            #sort the first part and take the first n_hard_mining acorrding to the logit value
+            logits_bg = logits[y==0]
+            logits_fg = logits[y!=0]
+            y_bg = y[y==0]
+            y_fg = y[y!=0]
+            
+            # Get the top k values and their indices from the first column
+            top_k_values, top_k_indices = torch.topk(logits_bg[:, 0], self.n_hard_mining)
+
+            # Select the top k rows
+            top_logits_bg = logits_bg[top_k_indices]
+            top_labels_bg = y_bg[top_k_indices]
+            
+            logits = torch.cat((top_logits_bg, logits_fg), dim=0)
+            y = torch.cat((top_labels_bg, y_fg), dim=0)
+            
+        
+        loss = F.cross_entropy(logits, y)
 
         self.log("train_acc", acc, prog_bar=True)       
         self.log("train_loss", loss)
