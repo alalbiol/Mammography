@@ -24,6 +24,7 @@ sys.path.append(str(path))
 
 from utils.load_config import load_config, get_parameter
 from data.ddsm_dataset import DDSMPatchDataModule
+from models.model_selector import get_patch_model
 
 # Define the Image Classification Model using PyTorch Lightning
 class DDSMPatchClassifier(pl.LightningModule):
@@ -49,9 +50,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         })
         
         # Define a pre-trained model (ResNet18 in this case)
-        self.model = models.resnet18( weights=models.ResNet18_Weights.DEFAULT)
-        # Modify the last layer to match the number of classes
-        self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
+        self.model = get_patch_model(get_parameter(config, ["LightningModule", "model_name"]), num_classes=self.num_classes)
         
         # Metrics initialization
         self.train_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
@@ -242,10 +241,14 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description="Train a ddsm patch classifier.")
     parser.add_argument("--config_file", type=str, required=True, help="Path to the configuration file.")
+    parser.add_argument("--overrides", type=str, default = None, help="Overrides for the configuration file.")
     args = parser.parse_args()
 
     # Load configuration from YAML file
-    config = load_config(args.config_file)
+    config = load_config(args.config_file, override_file=args.overrides)
+    
+    from pprint import pprint
+    pprint(config)
     
     GPU_TYPE = get_parameter(config, ["General", "gpu_type"],"None")
     if GPU_TYPE == "RTX 3090":
@@ -270,7 +273,7 @@ if __name__ == "__main__":
         max_epochs=max_epochs,
         logger=logger,
         callbacks= callbacks,
-        accelerator = 'gpu' if torch.cuda.is_available() else None,
+        accelerator = 'gpu' if torch.cuda.is_available() else "cpu",
     )
     
     # Fit the model

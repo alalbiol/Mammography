@@ -4,7 +4,7 @@ General:
 
 Datamodule:
   patch_size: 224
-  convert_to_RGB: True
+  convert_to_rgb: True
   split_csv: resources/ddsm/DDSM_train.csv
   ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
   ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_1152x896
@@ -21,6 +21,7 @@ Logger:
   save_dir: /tmp/logs/ddsm_patch_224
 
 LightningModule:
+  model_name: resnet18
   learning_rate: 0.001
   optimizer_type: adam
   num_classes: 5
