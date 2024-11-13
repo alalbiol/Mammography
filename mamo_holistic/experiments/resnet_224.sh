@@ -3,10 +3,10 @@
 # This script is used to run the experiments to see resnet18, resnet34, resnet50 with 224x224 patches.
 
 # Initialize Conda
-if [ -d "~/miniconda3" ]; then
-    source ~/miniconda3/etc/profile.d/conda.sh
-elif [ -d "~/anaconda3" ]; then
-    source ~/anaconda3/etc/profile.d/conda.sh
+if [ -d "$HOME/miniconda3" ]; then
+    source $HOME/miniconda3/etc/profile.d/conda.sh
+elif [ -d "$HOME/anaconda3" ]; then
+    source $HOME/anaconda3/etc/profile.d/conda.sh
 else
     echo "Conda not found in the default directories"
 fi

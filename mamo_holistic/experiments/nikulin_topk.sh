@@ -4,14 +4,13 @@
 
 # Initialize Conda
 #check if the conda is installed either in miniconda3 or anaconda3
-if [ -d "~/miniconda3" ]; then
-    source ~/miniconda3/etc/profile.d/conda.sh
-elif [ -d "~/anaconda3" ]; then
-    source ~/anaconda3/etc/profile.d/conda.sh
+if [ -d "$HOME/miniconda3" ]; then
+    source $HOME/miniconda3/etc/profile.d/conda.sh
+elif [ -d "$HOME/anaconda3" ]; then
+    source $HOME/anaconda3/etc/profile.d/conda.sh
 else
     echo "Conda not found in the default directories"
 fi
-
 
 # Activate the Mammo environment
 conda activate Mammo
