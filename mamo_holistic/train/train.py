@@ -23,6 +23,7 @@ path = pathlib.Path(__file__).parent.parent.absolute()
 sys.path.append(str(path))
 
 from utils.load_config import load_config, get_parameter
+from utils.utils import fig2img
 from data.ddsm_dataset import DDSMPatchDataModule
 from models.model_selector import get_patch_model
 
@@ -184,20 +185,19 @@ class DDSMPatchClassifier(pl.LightningModule):
     #     self.log("test_acc", acc)
     #     return loss
     
-    def on_training_epoch_end(self, outputs):
-        # log train accuracy
+    # compute training metrics at the end of training epoch
+    def on_train_epoch_end(self):
+        
+        #super().on_train_epoch_end()
+        self.train_confusion_matrix.compute()
+        fig, ax = self.train_confusion_matrix.plot()                
+        experiment = self.logger.experiment
+        experiment.log({"train confusion_matrix": wandb.Image(fig2img(fig))})
+        self.train_confusion_matrix.reset()
+        
         self.log("train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
         self.train_accuracy.reset()
-        
-        self.train_confusion_matrix.compute()
-        fig, ax = self.train_confusion_matrix.plot()
-                
-        experiment = self.logger.experiment
-        experiment.log({"train confusion_matrix": wandb.Image(fig)})
-        self.train_confusion_matrix.reset()
-        # close the figure
-        plt.close(fig)
-        
+            
     
     def on_validation_epoch_end(self):
         # Compute precision, recall, and f1 for each class
@@ -230,9 +230,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.val_confusion_matrix.compute()
         fig, ax = self.val_confusion_matrix.plot()      
         experiment = self.logger.experiment
-        experiment.log({"val confusion_matrix": wandb.Image(fig)})
+        experiment.log({"val confusion_matrix": wandb.Image(fig2img(fig))})
         self.val_confusion_matrix.reset()
-        plt.close(fig)
         
         # val_auroc_5 = self.val_AUROC_5.compute()
         # val_auroc_4 = self.val_AUROC_4.compute()

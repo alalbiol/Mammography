@@ -37,3 +37,43 @@ def show_mask_image(image_path, mask_path,ax = None, points = None):
         y = points[:,1]
         ax.plot(x, y, 'b')
         
+def fig2data ( fig , close_fig = True):
+    """
+    @brief Convert a Matplotlib figure to a 4D numpy array with RGBA channels and return it
+    @param fig a matplotlib figure
+    @return a numpy 3D array of RGBA values
+    """
+    # draw the renderer
+    fig.canvas.draw ( )
+ 
+    # Get the RGBA buffer from the figure
+    w,h = fig.canvas.get_width_height()
+    buf = np.fromstring ( fig.canvas.tostring_argb(), dtype=np.uint8 )
+    buf.shape = ( w, h,4 )
+ 
+    # canvas.tostring_argb give pixmap in ARGB mode. Roll the ALPHA channel to have it in RGBA mode
+    buf = np.roll ( buf, 3, axis = 2 )
+
+    if close_fig:
+        plt.close(fig)
+
+    return buf
+
+from PIL import Image
+
+ 
+def fig2img ( fig, close_fig = True ):
+    """
+    @brief Convert a Matplotlib figure to a PIL Image in RGBA format and return it
+    @param fig a matplotlib figure
+    @return a Python Imaging Library ( PIL ) image
+    """
+    # put the figure pixmap into a numpy array
+    buf = fig2data ( fig )
+    w, h, d = buf.shape
+    image =  Image.frombytes( "RGBA", ( w ,h ), buf.tostring( ) )
+
+    if close_fig:
+        plt.close(fig)
+
+    return image

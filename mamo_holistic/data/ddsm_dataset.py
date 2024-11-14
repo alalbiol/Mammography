@@ -441,6 +441,7 @@ class DDSM_Patch_Dataset(Dataset):
         self.ddsm_annotations = self.load_annotations(split_csv, ddsm_annotations)
         
         if subset_size is not None:
+            print("Subsetting dataset to ", subset_size)
             self.ddsm_annotations = self.ddsm_annotations.sample(subset_size)
         
         #class_names = self.ddsm_annotations['label'].unique()

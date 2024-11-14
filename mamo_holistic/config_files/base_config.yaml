@@ -12,6 +12,8 @@ Datamodule:
   batch_size: 32
   num_workers: 16
   pin_memory: True
+  #subset_size_train: 1000
+  #subset_size_test: 100
 
 
 Logger:
@@ -25,8 +27,6 @@ LightningModule:
   learning_rate: 0.001
   optimizer_type: adam
   num_classes: 5
-  #subset_train_size: 1000
-  #subset_val_size: 100
   lr_scheduler: ReduceLROnPlateau
   lr_scheduler_options:
     mode: min
@@ -38,12 +38,13 @@ Trainer:
   max_epochs: 200
 
 
+
 Callbacks:
-  EarlyStopping:
-    monitor: val_loss
-    mode: min
-    patience: 60
-    verbose: True
+  # EarlyStopping:
+  #   monitor: val_loss
+  #   mode: min
+  #   patience: 60
+  #   verbose: True
   LearningRateMonitor:
     logging_interval: 'epoch'
   ModelCheckpoint:
