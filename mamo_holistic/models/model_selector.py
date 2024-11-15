@@ -38,6 +38,18 @@ def get_patch_model(model_name, num_classes = 5,  **kwargs):
         model.fc = nn.Linear(model.fc.in_features, num_classes)
         return model
     
+    if model_name == "resnet50_bn":
+        print("Using ResNet50 model")
+        model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        # Modify the last layer to match the number of classes
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+        
+        bn = nn.BatchNorm2d(3)
+        
+        model = nn.Sequential(bn, model)
+        
+        return model
+    
     
     
     raise ValueError(f"Model {model_name} not found.")

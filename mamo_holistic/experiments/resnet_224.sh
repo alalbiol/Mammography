@@ -23,6 +23,7 @@ echo "Current working directory: $(pwd)"
 
 #run experiments for resnet18, resnet34, resnet50 with 224x224 patches
 #enable Mammo conda environment
-python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_18.yaml
-python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_34.yaml
+#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_18.yaml
+#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_34.yaml
+python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_bn.yaml
 python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml
