@@ -47,12 +47,12 @@ Callbacks:
   #   verbose: True
   LearningRateMonitor:
     logging_interval: 'epoch'
-  ModelCheckpoint:
-    monitor: val_loss
-    mode: min
-    save_top_k: 1
-    dirpath: /tmp/logs/ddsm_patch_224
-    filename: best_model
-    verbose: True
+  # ModelCheckpoint:
+  #   monitor: val_loss
+  #   mode: min
+  #   save_top_k: 1
+  #   dirpath: /tmp/logs/ddsm_patch_224
+  #   filename: best_model
+  #   verbose: True
   
   
