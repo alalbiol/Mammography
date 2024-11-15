@@ -3,3 +3,4 @@ Yolo8Mamo/train_yolo/runs/*
 *.pyc
 *.pyo
 __pycache__/*
+*.log
