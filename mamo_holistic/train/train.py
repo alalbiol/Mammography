@@ -228,8 +228,12 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.train_accuracy.reset()
         
            # Calculate cancer probability
-        cancer_prob = self.train_outputs[:, 3] + self.train_outputs[:, 4]
-        cancer_label = (self.train_targets > 2).long()
+        if self.num_classes == 5:
+            cancer_prob = self.train_outputs[:, 3] + self.train_outputs[:, 4]
+            cancer_label = (self.train_targets > 2).long()
+        else: # binary labels
+            cancer_prob = self.train_outputs[:, 1]
+            cancer_label = self.train_targets
         
         # Compute AUROC and PRROC
         auroc = roc_auc_score(cancer_label, cancer_prob)
@@ -288,8 +292,12 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         
            # Calculate cancer probability
-        cancer_prob = self.val_outputs[:, 3] + self.val_outputs[:, 4]
-        cancer_label = (self.val_targets > 2).long()
+        if self.num_classes == 5:
+            cancer_prob = self.val_outputs[:, 3] + self.val_outputs[:, 4]
+            cancer_label = (self.val_targets > 2).long()
+        else: # binary labels
+            cancer_prob = self.val_outputs[:, 1]
+            cancer_label = self.val_targets
         
         # for the first epoch, skip if all labels are the same
         if cancer_label.sum() == 0 or cancer_label.sum() == len(cancer_label): # Skip if all labels are the same

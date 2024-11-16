@@ -1,0 +1,21 @@
+Datamodule:
+  patch_size: 224
+  include_normals: False
+
+# adds weight class in cross entropy
+Logger:
+  name: model_resnet50_224_wo_normals_WC 
+  save_dir: /tmp/logs/model_resnet50_224_wo_normals_WC
+
+
+LightningModule:
+  model_name: resnet50
+  loss_name: cross_entropy  
+  loss_params:
+    weight: [0.5,1,1,2,2]
+
+
+
+#Callbacks:
+#  ModelCheckpoint:
+#    dirpath: /tmp/logs/model_resnet50_224_wo_normals_WC

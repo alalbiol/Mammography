@@ -14,12 +14,18 @@ def get_loss(loss_name, **kwargs):
     Returns:
         The loss class.
     """
+    
+    if "weight" in kwargs:
+        kwargs["weight"] = torch.tensor(kwargs["weight"])
+    
     if loss_name == "focal":
         print("Using Focal loss")
+        print("kwargs: ", kwargs)
         return FocalLoss(**kwargs)
     
     if loss_name == "cross_entropy":
         print("Using CrossEntropy loss")
+        print("kwargs: ", kwargs)
         return nn.CrossEntropyLoss(**kwargs)
     
     raise ValueError(f"Loss {loss_name} not found.")
