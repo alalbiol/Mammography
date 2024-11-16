@@ -430,13 +430,15 @@ class DDSM_Patch_Dataset(Dataset):
                  convert_to_rgb = True,
                  return_mask=False,
                  patch_sampler = None,
-                 subset_size = None):
+                 subset_size = None, 
+                 include_normals = True):
         
         self.split_csv = split_csv
         self.root_dir = pathlib.Path(root_dir)
         self.return_mask = return_mask
         self.patch_sampler = patch_sampler
         self.convert_to_rgb = convert_to_rgb
+        self.include_normals = include_normals # include normal images in the dataset
         
         self.ddsm_annotations = self.load_annotations(split_csv, ddsm_annotations)
         
@@ -483,29 +485,32 @@ class DDSM_Patch_Dataset(Dataset):
         annotations = annotations[annotations['image_id'].isin(split_images['ddsm_image'])]
         print("Number of annotations after filtering split: ", len(annotations))
         
-        
-        # annotations only contains abnormal images, lets add normal images for training
-        normals_images = [im for im in split_images['ddsm_image'].values if 'normals' in im]
-        print(f"Found {len(normals_images)} normal images")
-        
-        normal_records = []
-        for normal_image in normals_images:
-            record = {
-                'type': "NORMAL",
-                'assesment': None,
-                'subtlety': None,
-                'pathology': "NORMAL",
-                'outline' : None,
-                'bounding_box': None,
-                'breast_malignat': False,
-                'image_id': normal_image,
-                'mask_id': None
-            }
-            normal_records.append(record)
+        if self.include_normals:
+            # annotations only contains abnormal images, lets add normal images for training
+            normals_images = [im for im in split_images['ddsm_image'].values if 'normals' in im]
+            print(f"Including {len(normals_images)} normal images")
             
-        annotations = pd.concat([annotations, pd.DataFrame(normal_records)], ignore_index=True)
-            
-        annotations['label'] = annotations['type'] + "_" + annotations['pathology']
+            normal_records = []
+            for normal_image in normals_images:
+                record = {
+                    'type': "NORMAL",
+                    'assesment': None,
+                    'subtlety': None,
+                    'pathology': "NORMAL",
+                    'outline' : None,
+                    'bounding_box': None,
+                    'breast_malignat': False,
+                    'image_id': normal_image,
+                    'mask_id': None
+                }
+                normal_records.append(record)
+                
+            annotations = pd.concat([annotations, pd.DataFrame(normal_records)], ignore_index=True)
+                
+            annotations['label'] = annotations['type'] + "_" + annotations['pathology']
+            print("Number of annotations after adding normals: ", len(annotations))
+        else:
+            print("Not including normal images")
         
         map_classes = {
             'NORMAL_NORMAL': 'NORMAL',
@@ -538,7 +543,6 @@ class DDSM_Patch_Dataset(Dataset):
                 #print("Changed CALCIFICATION UNPROVEN to ", annotations.at[k, 'label'], " ", record['image_id'])
         
         
-        print("Number of annotations after adding normals: ", len(annotations))
         
         annotations = annotations[annotations['label'].isin(['NORMAL', 'MASS_MALIGNANT', 'MASS_BENIGN', 'CALCIFICATION_MALIGNANT', 'CALCIFICATION_BENIGN'])]
         
@@ -770,6 +774,7 @@ class DDSMPatchDataModule(pl.LightningDataModule):
         self.eval_patches_root = get_parameter(config, ['Datamodule', 'eval_patches_root'])
         self.subset_size_train = get_parameter(config, ['Datamodule', 'subset_size_train'], default=None)
         self.subset_size_test = get_parameter(config, ['Datamodule', 'subset_size_test'], default=None)
+        self.include_normals = get_parameter(config, ['Datamodule', 'include_normals'], default=True)
         self.source_root = get_parameter(config, ['General', 'source_root'], default=None)
         self.source_root = pathlib.Path(self.source_root) if self.source_root is not None else None
         
@@ -801,7 +806,8 @@ class DDSMPatchDataModule(pl.LightningDataModule):
                                     batch_size=self.batch_size, 
                                     convert_to_rgb=self.convert_to_rgb,
                                     shuffle=True, num_workers=self.num_workers, 
-                                    return_mask=False, subset_size=self.subset_size_train)
+                                    return_mask=False, subset_size=self.subset_size_train,
+                                    include_normals=self.include_normals)
     
     def val_dataloader(self):
         return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, 

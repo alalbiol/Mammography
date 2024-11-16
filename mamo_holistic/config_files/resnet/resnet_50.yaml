@@ -7,7 +7,7 @@ Logger:
 
 
 LightningModule:
-  model_name: resnet18
+  model_name: resnet50
 
 
 Callbacks:
