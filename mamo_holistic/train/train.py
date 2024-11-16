@@ -23,9 +23,14 @@ path = pathlib.Path(__file__).parent.parent.absolute()
 sys.path.append(str(path))
 
 from utils.load_config import load_config, get_parameter
-from utils.utils import fig2img
+from utils.utils import fig2img, str_to_bool
+from utils.utils import plot_roc_curve, plot_pr_curve
 from data.ddsm_dataset import DDSMPatchDataModule
 from models.model_selector import get_patch_model
+from losses import get_loss
+
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve, precision_recall_curve
+
 
 # Define the Image Classification Model using PyTorch Lightning
 class DDSMPatchClassifier(pl.LightningModule):
@@ -40,6 +45,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.lr_scheduler = get_parameter(config, ["LightningModule", "lr_scheduler"], default=None)
         self.lr_scheduler_options = get_parameter(config, ["LightningModule", "lr_scheduler_options"], default={})
         self.n_hard_mining = get_parameter(config, ["LightningModule", "n_hard_mining"], default=-1)
+        self.loss_name = get_parameter(config, ["LightningModule", "loss_name"], default="cross_entropy")
+        self.loss_params = get_parameter(config, ["LightningModule", "loss_params"], default={})
 
         assert isinstance(self.lr_scheduler_options['min_lr'],float), "min_lr must be a float"
 
@@ -53,6 +60,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         # Define a pre-trained model (ResNet18 in this case)
         self.model = get_patch_model(get_parameter(config, ["LightningModule", "model_name"]), num_classes=self.num_classes)
+        
+        self.loss_fn = get_loss(self.loss_name, **self.loss_params)
         
         # Metrics initialization
         self.train_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
@@ -110,6 +119,10 @@ class DDSMPatchClassifier(pl.LightningModule):
     def forward(self, x):
         return self.model(x)
     
+    def on_train_epoch_start(self):
+        self.train_outputs = torch.empty(0, self.num_classes, device='cpu')
+        self.train_targets = torch.empty(0, dtype=torch.long, device='cpu')
+    
     def training_step(self, batch, batch_idx):
         x = batch[0]
         y = batch[1]
@@ -142,18 +155,27 @@ class DDSMPatchClassifier(pl.LightningModule):
         preds = torch.argmax(logits, dim=1)
         self.train_confusion_matrix(preds, y)
         
-        loss = F.cross_entropy(logits, y)
+        loss = self.loss_fn(logits, y)
 
         self.log("train_acc", acc, prog_bar=True)       
         self.log("train_loss", loss)
+        
+        # Store outputs and targets for AUROC and PRROC calculation
+        self.train_outputs = torch.cat((self.train_outputs, logits.detach().cpu()), dim=0)
+        self.train_targets = torch.cat((self.train_targets, y.detach().cpu()), dim=0)
+    
         return loss
+    
+    def on_validation_epoch_start(self):
+        self.val_outputs = torch.empty(0, self.num_classes, device='cpu')
+        self.val_targets = torch.empty(0, dtype=torch.long, device='cpu')
     
     def validation_step(self, batch, batch_idx):
         x = batch[0]
         y = batch[1]
         
         logits = self(x)
-        loss = F.cross_entropy(logits, y)
+        loss = self.loss_fn(logits, y)
         
         preds = torch.argmax(logits, dim=1)
         
@@ -173,7 +195,11 @@ class DDSMPatchClassifier(pl.LightningModule):
         acc = (preds == y).float().mean() # global accuracy
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", acc, prog_bar=True)
-                
+        
+        # Store outputs and targets for AUROC and PRROC calculation
+        self.val_outputs = torch.cat((self.val_outputs, logits.detach().cpu()), dim=0)
+        self.val_targets = torch.cat((self.val_targets, y.detach().cpu()), dim=0) 
+                  
         return loss
     
     # def test_step(self, batch, batch_idx):
@@ -187,16 +213,42 @@ class DDSMPatchClassifier(pl.LightningModule):
     
     # compute training metrics at the end of training epoch
     def on_train_epoch_end(self):
+        print("on_train_epoch_end called")  # Debug print statement
         
-        #super().on_train_epoch_end()
+        super().on_train_epoch_end()
         self.train_confusion_matrix.compute()
-        fig, ax = self.train_confusion_matrix.plot()                
-        experiment = self.logger.experiment
-        experiment.log({"train confusion_matrix": wandb.Image(fig2img(fig))})
+        fig, ax = self.train_confusion_matrix.plot()
+        
+        if isinstance(self.trainer.logger,WandbLogger):                
+            experiment = self.logger.experiment
+            experiment.log({"train confusion_matrix": wandb.Image(fig2img(fig))})
         self.train_confusion_matrix.reset()
         
         self.log("train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
         self.train_accuracy.reset()
+        
+           # Calculate cancer probability
+        cancer_prob = self.train_outputs[:, 3] + self.train_outputs[:, 4]
+        cancer_label = (self.train_targets > 2).long()
+        
+        # Compute AUROC and PRROC
+        auroc = roc_auc_score(cancer_label, cancer_prob)
+        precision, recall, _ = precision_recall_curve(cancer_label, cancer_prob)
+        prroc = average_precision_score(cancer_label, cancer_prob)
+        
+        # Log AUROC and PRROC
+        self.log("train_auroc", auroc, prog_bar=True)
+        self.log("train_prroc", prroc, prog_bar=True)
+        
+        # Plot and log ROC and PR curves
+        fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)
+        fig_roc, ax_roc = plot_roc_curve(fpr, tpr)
+        fig_pr, ax_pr = plot_pr_curve(precision, recall)
+        
+        if isinstance(self.trainer.logger, WandbLogger):
+            experiment.log({"train ROC curve": wandb.Image(fig2img(fig_roc))})
+            experiment.log({"train PR curve": wandb.Image(fig2img(fig_pr))})
+
             
     
     def on_validation_epoch_end(self):
@@ -228,11 +280,40 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.total.zero_()
         
         self.val_confusion_matrix.compute()
-        fig, ax = self.val_confusion_matrix.plot()      
-        experiment = self.logger.experiment
-        experiment.log({"val confusion_matrix": wandb.Image(fig2img(fig))})
+        fig, ax = self.val_confusion_matrix.plot() 
+        if isinstance( self.trainer.logger, WandbLogger):     
+            experiment = self.logger.experiment
+            experiment.log({"val confusion_matrix": wandb.Image(fig2img(fig))})
         self.val_confusion_matrix.reset()
         
+        
+           # Calculate cancer probability
+        cancer_prob = self.val_outputs[:, 3] + self.val_outputs[:, 4]
+        cancer_label = (self.val_targets > 2).long()
+        
+        # for the first epoch, skip if all labels are the same
+        if cancer_label.sum() == 0 or cancer_label.sum() == len(cancer_label): # Skip if all labels are the same
+            return
+        
+        # Compute AUROC and PRROC
+        auroc = roc_auc_score(cancer_label, cancer_prob)
+        precision, recall, _ = precision_recall_curve(cancer_label, cancer_prob)
+        prroc = average_precision_score(cancer_label, cancer_prob)
+        
+        # Log AUROC and PRROC
+        self.log("val_auroc", auroc, prog_bar=True)
+        self.log("val_prroc", prroc, prog_bar=True)
+        
+        # Plot and log ROC and PR curves
+        fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)
+        fig_roc, ax_roc = plot_roc_curve(fpr, tpr)
+        fig_pr, ax_pr = plot_pr_curve(precision, recall)
+        
+        if isinstance(self.trainer.logger, WandbLogger):
+            experiment = self.logger.experiment
+            experiment.log({"val ROC curve": wandb.Image(fig2img(fig_roc))})
+            experiment.log({"val PR curve": wandb.Image(fig2img(fig_pr))})
+            
         # val_auroc_5 = self.val_AUROC_5.compute()
         # val_auroc_4 = self.val_AUROC_4.compute()
         # self.log("val_AUROC_5", val_auroc_5)
@@ -284,6 +365,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a ddsm patch classifier.")
     parser.add_argument("--config_file", type=str, required=True, help="Path to the configuration file.")
     parser.add_argument("--overrides", type=str, default = None, help="Overrides for the configuration file.")
+    parser.add_argument("--logger", type=str_to_bool, default=True, help="Use wandb for logging.")
     args = parser.parse_args()
 
     # Load configuration from YAML file
@@ -303,7 +385,9 @@ if __name__ == "__main__":
 
     model = DDSMPatchClassifier(config=config)
     data_module = DDSMPatchDataModule(config=config)
-    logger = get_logger(config)
+    
+    
+    logger = get_logger(config) if args.logger else None
 
 
     # Trainer arguments

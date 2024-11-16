@@ -77,3 +77,37 @@ def fig2img ( fig, close_fig = True ):
         plt.close(fig)
 
     return image
+
+
+def str_to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value.lower() in {'false', 'f', 'no', 'n', '0'}:
+        return False
+    elif value.lower() in {'true', 't', 'yes', 'y', '1'}:
+        return True
+    else:
+        raise ValueError(f"{value} is not a valid boolean value")
+    
+    
+    
+
+
+def plot_roc_curve(fpr, tpr, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.plot(fpr, tpr, label='ROC curve')
+    ax.plot([0, 1], [0, 1], 'k--')
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    ax.set_title('Receiver Operating Characteristic')
+    return fig, ax
+
+def plot_pr_curve(precision, recall, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.plot(recall, precision, label='PR curve')
+    ax.set_xlabel('Recall')
+    ax.set_ylabel('Precision')
+    ax.set_title('Precision-Recall Curve')
+    return fig, ax

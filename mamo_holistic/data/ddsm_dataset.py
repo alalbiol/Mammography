@@ -507,7 +507,6 @@ class DDSM_Patch_Dataset(Dataset):
                 
             annotations = pd.concat([annotations, pd.DataFrame(normal_records)], ignore_index=True)
                 
-            annotations['label'] = annotations['type'] + "_" + annotations['pathology']
             print("Number of annotations after adding normals: ", len(annotations))
         else:
             print("Not including normal images")
@@ -526,6 +525,7 @@ class DDSM_Patch_Dataset(Dataset):
             'OTHER_BENIGN': 'OTHER_BENIGN',
             }
         
+        annotations['label'] = annotations['type'] + "_" + annotations['pathology']
         annotations['label'] = annotations['label'].map(map_classes)
         
         
@@ -732,7 +732,8 @@ def collate_fn(batch):
 
 
 def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batch_size=32, 
-                         convert_to_rgb = True, shuffle=True, num_workers=4, return_mask=False, subset_size=None):
+                         convert_to_rgb = True, shuffle=True, num_workers=4, return_mask=False, 
+                         subset_size=None, include_normals=True):
     
     
     affine_transform = RandomAffineTransform()
@@ -748,7 +749,8 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batc
     dataset = DDSM_Patch_Dataset(split_csv, ddsm_annotations, root_dir, 
                                 return_mask= return_mask, patch_sampler = patch_sampler,
                                 convert_to_rgb = convert_to_rgb,
-                                subset_size = subset_size)
+                                subset_size = subset_size,
+                                include_normals=include_normals)
 
     
 
