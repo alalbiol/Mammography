@@ -28,6 +28,7 @@ from utils.utils import plot_roc_curve, plot_pr_curve
 from data.ddsm_dataset import DDSMPatchDataModule
 from models.model_selector import get_patch_model
 from losses import get_loss
+from utils.traininig import mixup_data
 
 from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve, precision_recall_curve
 
@@ -47,6 +48,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.n_hard_mining = get_parameter(config, ["LightningModule", "n_hard_mining"], default=-1)
         self.loss_name = get_parameter(config, ["LightningModule", "loss_name"], default="cross_entropy")
         self.loss_params = get_parameter(config, ["LightningModule", "loss_params"], default={})
+        self.mixup_alpha = get_parameter(config, ["LightningModule", "mixup_alpha"], default=-1)
 
         assert isinstance(self.lr_scheduler_options['min_lr'],float), "min_lr must be a float"
 
@@ -127,36 +129,43 @@ class DDSMPatchClassifier(pl.LightningModule):
         x = batch[0]
         y = batch[1]
         
-        logits = self(x)
+        
+        #check if mixup is enabled
+        if  self.mixup_alpha > 0:
+            x, y_a, y_b, lam = mixup_data(x, y, self.mixup_alpha)
+            y = y_a if lam > 0.5 else y_b
+            logits = self(x)
+            loss = lam * self.loss_fn(logits, y_a) + (1 - lam) * self.loss_fn(logits, y_b)
+        else:        
+            logits = self(x)
+            loss = self.loss_fn(logits, y)
         
         preds = torch.argmax(logits, dim=1)
                 
         acc = self.train_accuracy(preds, y)
         
-        if self.n_hard_mining > 0:
-            #split logits into two parts. First those with y==0 and second those with y!=0
-            #sort the first part and take the first n_hard_mining acorrding to the logit value
-            logits_bg = logits[y==0]
-            logits_fg = logits[y!=0]
-            y_bg = y[y==0]
-            y_fg = y[y!=0]
+        # if self.n_hard_mining > 0:
+        #     #split logits into two parts. First those with y==0 and second those with y!=0
+        #     #sort the first part and take the first n_hard_mining acorrding to the logit value
+        #     logits_bg = logits[y==0]
+        #     logits_fg = logits[y!=0]
+        #     y_bg = y[y==0]
+        #     y_fg = y[y!=0]
             
-            # Get the top k values and their indices from the first column
-            top_k_values, top_k_indices = torch.topk(logits_bg[:, 0], self.n_hard_mining)
+        #     # Get the top k values and their indices from the first column
+        #     top_k_values, top_k_indices = torch.topk(logits_bg[:, 0], self.n_hard_mining)
 
-            # Select the top k rows
-            top_logits_bg = logits_bg[top_k_indices]
-            top_labels_bg = y_bg[top_k_indices]
+        #     # Select the top k rows
+        #     top_logits_bg = logits_bg[top_k_indices]
+        #     top_labels_bg = y_bg[top_k_indices]
             
-            logits = torch.cat((top_logits_bg, logits_fg), dim=0)
-            y = torch.cat((top_labels_bg, y_fg), dim=0)
+        #     logits = torch.cat((top_logits_bg, logits_fg), dim=0)
+        #     y = torch.cat((top_labels_bg, y_fg), dim=0)
             
         
         preds = torch.argmax(logits, dim=1)
         self.train_confusion_matrix(preds, y)
         
-        loss = self.loss_fn(logits, y)
-
         self.log("train_acc", acc, prog_bar=True)       
         self.log("train_loss", loss)
         
@@ -213,8 +222,6 @@ class DDSMPatchClassifier(pl.LightningModule):
     
     # compute training metrics at the end of training epoch
     def on_train_epoch_end(self):
-        print("on_train_epoch_end called")  # Debug print statement
-        
         super().on_train_epoch_end()
         self.train_confusion_matrix.compute()
         fig, ax = self.train_confusion_matrix.plot()
@@ -361,6 +368,9 @@ def create_callbacks(config):
         elif callback_name == "LearningRateMonitor":
             from pytorch_lightning.callbacks import LearningRateMonitor
             callbacks.append(LearningRateMonitor(**callbacks_dict[callback_name]))
+        elif callback_name == "LearningRateWarmUp":
+            from utils.callbacks import LearningRateWarmUpCallback
+            callbacks.append(LearningRateWarmUpCallback(**callbacks_dict[callback_name]))
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
     return callbacks

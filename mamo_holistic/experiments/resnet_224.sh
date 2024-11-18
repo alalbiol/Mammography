@@ -1,4 +1,4 @@
-!#/bin/bash
+#!/bin/bash
 
 # This script is used to run the experiments to see resnet18, resnet34, resnet50 with 224x224 patches.
 
@@ -28,4 +28,6 @@ echo "Current working directory: $(pwd)"
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_bn.yaml
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals.yaml
-python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals_WC.yaml
+#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals_WC.yaml
+#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_lrwarmup.yaml
+python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_mixup.yaml
