@@ -1,0 +1,20 @@
+Datamodule:
+  patch_size: 224
+
+Logger:
+  name: model_resnet50_224_lrwarmup
+  save_dir: /tmp/logs/model_resnet50_224
+
+
+LightningModule:
+  model_name: resnet50
+
+
+Callbacks:
+  # ModelCheckpoint:
+  #   dirpath: /tmp/logs/model_resnet50_224
+  LearningRateWarmUp:
+      warmup_epochs: 5
+      initial_lr: 1.e-6
+      max_lr: 1.e-3
+
