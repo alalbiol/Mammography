@@ -108,9 +108,9 @@ class NikulinPatchModel(nn.Module):
 
 
 
-class MammoModel(nn.Module):
+class NikulinImage(nn.Module):
     def __init__(self):
-        super(MammoModel, self).__init__()
+        super(NikulinImage, self).__init__()
 
         self.bn1 = nn.BatchNorm2d(1)
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
@@ -416,7 +416,7 @@ class MammoModel(nn.Module):
         x = self.bn10(x)
         x = F.relu(self.conv10(x))
         x = self.pool5(x)
-         
+        
         x = self.bn11(x)
         x = F.relu(self.conv11(x))
         x = self.bn12(x)

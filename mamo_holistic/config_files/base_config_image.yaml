@@ -1,0 +1,60 @@
+General:
+  source_root: /home/alalbiol/Programacion/Mammography/mamo_holistic
+  gpu_type: "RTX 3090" 
+
+Datamodule:
+  convert_to_rgb: False
+  train_csv: resources/ddsm/DDSM_train.csv
+  val_csv: resources/ddsm/DDSM_test.csv
+  ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
+  ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_1152x896
+  eval_patches_root: /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_224
+  batch_size: 8
+  num_workers: 8
+  pin_memory: True
+  #subset_size_train: 1000
+  #subset_size_test: 100
+
+
+Logger:
+  type: wandb
+  project: ddsm_patch
+  name: nikulin_image
+  save_dir: /tmp/logs/ddsm_patch_224
+
+LightningModule:
+  model_name: nikulin
+  model_params:
+    ckpt_path: /home/alalbiol/Programacion/mammography/others/nikulin/data/SC1_nets/Final_Round_RC1/best_model.ckpt-3750
+  learning_rate: 0.001
+  optimizer_type: adam
+  num_classes: 5
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_options:
+    mode: min
+    factor: 0.5
+    patience: 20
+    min_lr: 1.e-8
+
+Trainer:
+  max_epochs: 200
+
+
+
+Callbacks:
+  # EarlyStopping:
+  #   monitor: val_loss
+  #   mode: min
+  #   patience: 60
+  #   verbose: True
+  LearningRateMonitor:
+    logging_interval: 'epoch'
+  # ModelCheckpoint:
+  #   monitor: val_loss
+  #   mode: min
+  #   save_top_k: 1
+  #   dirpath: /tmp/logs/ddsm_patch_224
+  #   filename: best_model
+  #   verbose: True
+  
+  

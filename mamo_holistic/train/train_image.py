@@ -25,8 +25,8 @@ sys.path.append(str(path))
 from utils.load_config import load_config, get_parameter
 from utils.utils import fig2img, str_to_bool
 from utils.utils import plot_roc_curve, plot_pr_curve
-from data.ddsm_dataset import DDSMPatchDataModule
-from models.model_selector import get_patch_model
+from data.ddsm_dataset import DDSMImageDataModule
+from models.model_selector import get_image_model
 from losses import get_loss
 from utils.traininig import mixup_data
 
@@ -34,65 +34,55 @@ from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve, p
 
 
 # Define the Image Classification Model using PyTorch Lightning
-class DDSMPatchClassifier(pl.LightningModule):
+class DDSMImageClassifier(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         
           # Fetch hyperparameters from config
         self.model_name = get_parameter(config, ["LightningModule", "model_name"])
-        self.num_classes = get_parameter(config, ["LightningModule", "num_classes"])
-        self.optimizer_type = get_parameter(config, ["LightningModule", "optimizer_type"])
-        self.learning_rate = get_parameter(config, ["LightningModule", "learning_rate"])
+        self.num_classes = get_parameter(config, ["LightningModule", "num_classes"], default=2)
+        self.optimizer_type = get_parameter(config, ["LightningModule", "optimizer_type"], default="adam")
+        self.learning_rate = get_parameter(config, ["LightningModule", "learning_rate"], default=1e-3)
         self.optimizer_options = get_parameter(config, ["LightningModule", "optimizer_options"], default={})
         self.lr_scheduler = get_parameter(config, ["LightningModule", "lr_scheduler"], default=None)
         self.lr_scheduler_options = get_parameter(config, ["LightningModule", "lr_scheduler_options"], default={})
-        self.n_hard_mining = get_parameter(config, ["LightningModule", "n_hard_mining"], default=-1)
         self.loss_name = get_parameter(config, ["LightningModule", "loss_name"], default="cross_entropy")
         self.loss_params = get_parameter(config, ["LightningModule", "loss_params"], default={})
         self.mixup_alpha = get_parameter(config, ["LightningModule", "mixup_alpha"], default=-1)
+        self.model_name = get_parameter(config, ["LightningModule", "model_name"])
+        self.model_params = get_parameter(config, ["LightningModule", "model_params"], default={})
 
-        assert isinstance(self.lr_scheduler_options['min_lr'],float), "min_lr must be a float"
+    
 
         # Save hyperparameters
         self.save_hyperparameters({
+            'model_name': self.model_name,
+            'model_params': self.model_params,
             'num_classes': self.num_classes,
             'optimizer': self.optimizer_type,
             'learning_rate': self.learning_rate,
             'optimizer_options': self.optimizer_options,
             'lr_scheduler': self.lr_scheduler,
             'lr_scheduler_options': self.lr_scheduler_options,
-            'n_hard_mining': self.n_hard_mining,
             'loss_name': self.loss_name,
             'loss_params': self.loss_params,
             'mixup_alpha': self.mixup_alpha,
         })
         
         # Define a pre-trained model (ResNet18 in this case)
-        self.model = get_patch_model(self.model_name, num_classes=self.num_classes)
+        self.model = get_image_model(self.model_name, num_classes=self.num_classes, **self.model_params)
         
         self.loss_fn = get_loss(self.loss_name, **self.loss_params)
         
         # Metrics initialization
-        self.train_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
-        self.val_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
-        self.val_confusion_matrix = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=self.num_classes)
-        self.train_confusion_matrix = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=self.num_classes)
+        self.train_accuracy = torchmetrics.Accuracy('multiclass', num_classes=self.num_classes)
+        self.val_accuracy = torchmetrics.Accuracy('multiclass', num_classes=self.num_classes)
+        self.train_confusion_matrix = torchmetrics.ConfusionMatrix('multiclass', num_classes= self.num_classes)
+        self.val_confusion_matrix = torchmetrics.ConfusionMatrix('multiclass', num_classes= self.num_classes)
         
-        
-        self.tp = torch.zeros(self.num_classes)
-        self.fp = torch.zeros(self.num_classes)
-        self.fn = torch.zeros(self.num_classes)
-        self.total = torch.zeros(self.num_classes) 
-        
-        # self.val_precision = torchmetrics.Precision(num_classes=num_classes, average='macro')
-        # self.val_recall = torchmetrics.Recall(num_classes=num_classes, average='macro')
-        # self.val_f1 = torchmetrics.F1Score(num_classes=num_classes, average='macro')
         
         class_names = ['NORMAL',
-            'MASS_BENIGN',
-            'CALCIFICATION_BENIGN',
-            'MASS_MALIGNANT',
-            'CALCIFICATION_MALIGNANT',
+            'CANCER',
         ]
         self.class_to_idx = {class_name: i for i, class_name in enumerate(class_names)}
         self.idx_to_class = {i: class_name for i, class_name in enumerate(class_names)}
@@ -129,61 +119,43 @@ class DDSMPatchClassifier(pl.LightningModule):
         return self.model(x)
     
     def on_train_epoch_start(self):
-        self.train_outputs = torch.empty(0, self.num_classes, device='cpu')
+        self.train_outputs = torch.empty(0,  device='cpu')
         self.train_targets = torch.empty(0, dtype=torch.long, device='cpu')
-    
+
+        return super().on_train_epoch_start()
+        
+
     def training_step(self, batch, batch_idx):
         x = batch[0]
         y = batch[1]
         
         
-        #check if mixup is enabled
-        if  self.mixup_alpha > 0:
-            x, y_a, y_b, lam = mixup_data(x, y, self.mixup_alpha)
-            y = y_a if lam > 0.5 else y_b
-            logits = self(x)
-            loss = lam * self.loss_fn(logits, y_a) + (1 - lam) * self.loss_fn(logits, y_b)
-        else:        
-            logits = self(x)
-            loss = self.loss_fn(logits, y)
+        logits = self(x)
         
         preds = torch.argmax(logits, dim=1)
                 
         acc = self.train_accuracy(preds, y)
-        
-        # if self.n_hard_mining > 0:
-        #     #split logits into two parts. First those with y==0 and second those with y!=0
-        #     #sort the first part and take the first n_hard_mining acorrding to the logit value
-        #     logits_bg = logits[y==0]
-        #     logits_fg = logits[y!=0]
-        #     y_bg = y[y==0]
-        #     y_fg = y[y!=0]
-            
-        #     # Get the top k values and their indices from the first column
-        #     top_k_values, top_k_indices = torch.topk(logits_bg[:, 0], self.n_hard_mining)
-
-        #     # Select the top k rows
-        #     top_logits_bg = logits_bg[top_k_indices]
-        #     top_labels_bg = y_bg[top_k_indices]
-            
-        #     logits = torch.cat((top_logits_bg, logits_fg), dim=0)
-        #     y = torch.cat((top_labels_bg, y_fg), dim=0)
-            
-        
+        self.log("train_acc", acc, prog_bar=True)       
+                
         preds = torch.argmax(logits, dim=1)
         self.train_confusion_matrix(preds, y)
         
-        self.log("train_acc", acc, prog_bar=True)       
+        loss = self.loss_fn(logits, y)
         self.log("train_loss", loss)
         
+        
+        probs = F.softmax(logits, dim=1)
+        
         # Store outputs and targets for AUROC and PRROC calculation
-        self.train_outputs = torch.cat((self.train_outputs, logits.detach().cpu()), dim=0)
+        
+
+        self.train_outputs = torch.cat((self.train_outputs, probs[:,1].detach().cpu()), dim=0)
         self.train_targets = torch.cat((self.train_targets, y.detach().cpu()), dim=0)
     
         return loss
     
     def on_validation_epoch_start(self):
-        self.val_outputs = torch.empty(0, self.num_classes, device='cpu')
+        self.val_outputs = torch.empty(0,  device='cpu')
         self.val_targets = torch.empty(0, dtype=torch.long, device='cpu')
     
     def validation_step(self, batch, batch_idx):
@@ -197,25 +169,22 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         self.val_confusion_matrix(preds, y)
 
-        # Update confusion matrix components
-        for i in range(self.num_classes):
-            self.tp[i] += torch.sum((preds == i) & (y == i)).item()  # True positives
-            self.fp[i] += torch.sum((preds == i) & (y != i)).item()  # False positives
-            self.fn[i] += torch.sum((preds != i) & (y == i)).item()  # False negatives
-            self.total[i] += torch.sum(y == i).item()  # Total instances of class i
-
         # Log the loss (optional)
         self.log("val/loss", loss, prog_bar=True)
-        
-        
         acc = (preds == y).float().mean() # global accuracy
+        
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", acc, prog_bar=True)
         
+        probs = F.softmax(logits, dim=1)
+        
         # Store outputs and targets for AUROC and PRROC calculation
-        self.val_outputs = torch.cat((self.val_outputs, logits.detach().cpu()), dim=0)
+        #print("probs", probs[:,1].shape)
+        #print("self.val_outputs", self.val_outputs.shape)
+        
+        self.val_outputs = torch.cat((self.val_outputs, probs[:,1].detach().cpu()), dim=0)
         self.val_targets = torch.cat((self.val_targets, y.detach().cpu()), dim=0) 
-                  
+
         return loss
     
     # def test_step(self, batch, batch_idx):
@@ -241,13 +210,10 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.log("train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
         self.train_accuracy.reset()
         
-           # Calculate cancer probability
-        if self.num_classes == 5:
-            cancer_prob = self.train_outputs[:, 3] + self.train_outputs[:, 4]
-            cancer_label = (self.train_targets > 2).long()
-        else: # binary labels
-            cancer_prob = self.train_outputs[:, 1]
-            cancer_label = self.train_targets
+        # Calculate cancer probability
+       
+        cancer_prob = self.train_outputs[:, 1]
+        cancer_label = self.train_targets
         
         # Compute AUROC and PRROC
         auroc = roc_auc_score(cancer_label, cancer_prob)
@@ -270,32 +236,7 @@ class DDSMPatchClassifier(pl.LightningModule):
             
     
     def on_validation_epoch_end(self):
-        # Compute precision, recall, and f1 for each class
-        precision_per_class = self.tp / (self.tp + self.fp + 1e-10)  # Add small epsilon to avoid division by zero
-        recall_per_class = self.tp / (self.tp + self.fn + 1e-10)
-        f1_per_class = 2 * (precision_per_class * recall_per_class) / (precision_per_class + recall_per_class + 1e-10)
 
-        # Log per-class metrics at epoch end
-        for i in range(1,self.num_classes):
-            class_name = self.idx_to_class[i]
-            self.log(f"val/precision_class_{class_name}", precision_per_class[i])
-            self.log(f"val/recall_class_{class_name}", recall_per_class[i])
-            self.log(f"val/f1_class_{class_name}", f1_per_class[i])
-
-        # Calculate and log macro average
-        macro_precision = precision_per_class[1:].mean()
-        macro_recall = recall_per_class[1:].mean()
-        macro_f1 = f1_per_class[1:].mean()
-
-        self.log("val/macro_precision", macro_precision, prog_bar=True)
-        self.log("val/macro_recall", macro_recall, prog_bar=True)
-        self.log("val/macro_f1", macro_f1, prog_bar=True)
-
-        # Reset metrics to avoid accumulation over multiple epochs
-        self.tp.zero_()
-        self.fp.zero_()
-        self.fn.zero_()
-        self.total.zero_()
         
         self.val_confusion_matrix.compute()
         fig, ax = self.val_confusion_matrix.plot() 
@@ -305,14 +246,11 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.val_confusion_matrix.reset()
         
         
-           # Calculate cancer probability
-        if self.num_classes == 5:
-            cancer_prob = self.val_outputs[:, 3] + self.val_outputs[:, 4]
-            cancer_label = (self.val_targets > 2).long()
-        else: # binary labels
-            cancer_prob = self.val_outputs[:, 1]
-            cancer_label = self.val_targets
-        
+        # Calculate cancer probability
+
+        cancer_prob = self.val_outputs
+        cancer_label = self.val_targets
+    
         # for the first epoch, skip if all labels are the same
         if cancer_label.sum() == 0 or cancer_label.sum() == len(cancer_label): # Skip if all labels are the same
             return
@@ -336,13 +274,7 @@ class DDSMPatchClassifier(pl.LightningModule):
             experiment.log({"val ROC curve": wandb.Image(fig2img(fig_roc))})
             experiment.log({"val PR curve": wandb.Image(fig2img(fig_pr))})
             
-        # val_auroc_5 = self.val_AUROC_5.compute()
-        # val_auroc_4 = self.val_AUROC_4.compute()
-        # self.log("val_AUROC_5", val_auroc_5)
-        # self.log("val_AUROC_4", val_auroc_4)
-        # self.val_AUROC_5.reset()
-        # self.val_AUROC_4.reset()
-    
+   
     
 
 def get_logger(config):
@@ -388,6 +320,7 @@ def create_callbacks(config):
 if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description="Train a ddsm patch classifier.")
+    parser.add_argument("--task", type=str, default="train", help="The task to perform.")
     parser.add_argument("--config_file", type=str, required=True, help="Path to the configuration file.")
     parser.add_argument("--overrides", type=str, default = None, help="Overrides for the configuration file.")
     parser.add_argument("--logger", type=str_to_bool, default=True, help="Use wandb for logging.")
@@ -396,8 +329,7 @@ if __name__ == "__main__":
     # Load configuration from YAML file
     config = load_config(args.config_file, override_file=args.overrides)
     
-    from pprint import pprint
-    pprint(config)
+    
     
     GPU_TYPE = get_parameter(config, ["General", "gpu_type"],"None")
     if GPU_TYPE == "RTX 3090":
@@ -408,8 +340,8 @@ if __name__ == "__main__":
     # Set up model, data module, logger, and checkpoint callback
     
 
-    model = DDSMPatchClassifier(config=config)
-    data_module = DDSMPatchDataModule(config=config)
+    model = DDSMImageClassifier(config=config)
+    data_module = DDSMImageDataModule(config=config)
     
     
     logger = get_logger(config) if args.logger else None
@@ -429,7 +361,12 @@ if __name__ == "__main__":
     )
     
     # Fit the model
-    trainer.fit(model, data_module)
+    if args.task == "train":
+        trainer.fit(model, data_module)
+    elif args.task == "validate":
+        trainer.validate(model, data_module)
+    else:
+        raise ValueError(f"Unknown task {args.task}")
     
     # Test the model
     #trainer.test(model, data_module)

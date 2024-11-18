@@ -12,6 +12,8 @@ import cv2
 import pytorch_lightning as pl
 from utils.load_config import  get_parameter
 import gzip
+from utils.transforms import RandomContrast, RandomIntensity
+
 
 
 
@@ -499,7 +501,7 @@ class DDSM_Patch_Dataset(Dataset):
                     'pathology': "NORMAL",
                     'outline' : None,
                     'bounding_box': None,
-                    'breast_malignat': False,
+                    'breast_malignant': False,
                     'image_id': normal_image,
                     'mask_id': None
                 }
@@ -819,3 +821,217 @@ class DDSMPatchDataModule(pl.LightningDataModule):
     
     def test_dataloader(self):
         return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, return_mask=False)
+    
+    
+# Dataset to load full ddsm images
+class DDSM_Image_Dataset(Dataset):
+    def __init__(self, split_csv, ddsm_annotations, root_dir, 
+                convert_to_rgb = True,
+                return_mask=False,
+                subset_size = None, 
+                random_seed = 42,
+                num_normal_images_test = 700,
+                transform = None):
+            
+        
+        self.split_csv = split_csv
+        self.root_dir = pathlib.Path(root_dir)
+        self.return_mask = return_mask
+        self.convert_to_rgb = convert_to_rgb
+        self.random_seed = random_seed
+        self.num_normal_images_test = num_normal_images_test
+        self.transform = transform
+        
+        self.ddsm_annotations = self.load_annotations(split_csv, ddsm_annotations)
+        
+        if subset_size is not None:
+            print("Subsetting dataset to ", subset_size)
+            self.ddsm_annotations = self.ddsm_annotations.sample(subset_size)
+        
+        #class_names = self.ddsm_annotations['label'].unique()
+        class_names = ['NORMAL',
+            'CANCER',
+        ]
+        self.class_to_idx = {class_name: i for i, class_name in enumerate(class_names)}
+        self.idx_to_class = {i: class_name for i, class_name in enumerate(class_names)}
+        
+    
+    def get_all_targets(self):
+        """ Returns all the targets of the dataset, useful for sampling 
+
+        Returns:
+            np.array: with the targets of the dataset (per image)
+        """
+        return self.ddsm_annotations['label'].values
+        
+
+    def load_annotations(self, split_csv,  annotations_file):
+        
+        split_images = pd.read_csv(split_csv)
+        
+        
+        if str(annotations_file).endswith('.json'):
+            annotations = pd.read_json(annotations_file, orient='records', lines=True)
+        else:
+            with gzip.open(annotations_file, 'rt', encoding='utf-8') as f:
+                annotations = pd.read_json(f, orient='records', lines=True)
+
+
+        print("Number of annotations: ", len(annotations))
+        
+        
+        # filter all annotations that are in the train_images
+        annotations = annotations[annotations['image_id'].isin(split_images['ddsm_image'])]
+        print("Number of annotations after filtering split: ", len(annotations))
+        
+        
+            # annotations only contains abnormal images, lets add normal images for training
+        normals_images = [im for im in split_images['ddsm_image'].values if 'normals' in im]
+        
+        train = True if 'train' in str(split_csv).lower() else False
+        
+        if train:
+            normal_images = normals_images[:-self.num_normal_images_test]
+        else:
+            print("num normal images test: ", len(normals_images))
+            normal_images = normals_images[-self.num_normal_images_test:]
+        
+        print(f"Including {len(normals_images)} normal images")
+        
+        normal_records = []
+        for normal_image in normal_images:
+            record = {
+                'type': "NORMAL",
+                'assessment': None,
+                'subtlety': None,
+                'pathology': "NORMAL",
+                'outline' : None,
+                'bounding_box': None,
+                'breast_malignant': False,
+                'image_id': normal_image,
+                'mask_id': None
+            }
+            normal_records.append(record)
+        
+        annotations = pd.concat([annotations, pd.DataFrame(normal_records)], ignore_index=True)
+        
+        print("Number of annotations after adding normals: ", len(annotations))
+ 
+        annotations = annotations.groupby('image_id').first().reset_index()
+        
+        print("Number of annotations after removing repeated: ", len(annotations))
+        
+        return annotations
+        
+    def __len__(self):
+        return len(self.ddsm_annotations)
+    
+    def __getitem__(self, idx):
+        image_id = self.ddsm_annotations.iloc[idx]['image_id']
+        image_path = self.root_dir / image_id
+        image = Image.open(image_path)
+        
+        if self.return_mask:
+            mask_id = self.ddsm_annotations.iloc[idx]['mask_id']
+            if mask_id is None:
+                mask = np.zeros_like(image, dtype=np.uint8)
+            else:
+                mask_path = self.root_dir / mask_id
+                mask = Image.open(mask_path)
+        else:
+            mask = None
+            
+        if self.convert_to_rgb:
+            image = np.stack((image,)*3, axis=-1)
+        
+        label = int(self.ddsm_annotations.iloc[idx]['breast_malignant'])
+        
+        if self.transform is not None:
+            if mask is not None:
+                image, mask = self.transform(image, mask)
+            else:
+                image = self.transform(image)
+                
+        if mask is not None:
+            return image, label, mask
+        return image, label
+    
+    
+# Data Module to handle data loading and transformations
+
+class DDSMImageDataModule(pl.LightningDataModule):
+    def __init__(self, config):
+        super().__init__()
+        self.source_root = get_parameter(config, ['General', 'source_root'], default=None)
+        self.source_root = pathlib.Path(self.source_root) if self.source_root is not None else None
+
+        self.convert_to_rgb = get_parameter(config, ["Datamodule", "convert_to_rgb"], default=True)
+        self.ddsm_root = get_parameter(config, ['Datamodule', 'ddsm_root'])
+        self.batch_size = get_parameter(config, ['Datamodule', 'batch_size'])
+        self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
+        
+        self.train_csv = get_parameter(config, ['Datamodule', 'train_csv'])
+        self.train_csv = self.source_root / self.train_csv if self.source_root is not None else self.train_csv
+        self.val_csv = get_parameter(config, ['Datamodule', 'val_csv'])
+        self.val_csv = self.source_root / self.val_csv if self.source_root is not None else self.val_csv
+        
+        self.ddsm_annotations = get_parameter(config, ['Datamodule', 'ddsm_annotations'])
+        self.ddsm_annotations = self.source_root / self.ddsm_annotations if self.source_root is not None else self.ddsm_annotations
+        
+        self.num_normal_images_test = get_parameter(config, ['Datamodule', 'num_normal_images_test'], default=700)
+        self.random_seed = get_parameter(config, ['Datamodule', 'random_seed'], default=42)
+        self.subset_size_train = get_parameter(config, ['Datamodule', 'subset_size_train'], default=None)
+        self.subset_size_test = get_parameter(config, ['Datamodule', 'subset_size_test'], default=None)
+        
+        
+    def prepare_data(self):
+        # Download or prepare the data if needed
+        assert pathlib.Path(self.ddsm_root).exists(), f"Data directory {self.ddsm_root} does not exist."
+        assert pathlib.Path(self.train_csv).exists(), f"Split CSV file {self.train_csv} does not exist."
+        assert pathlib.Path(self.val_csv).exists(), f"Split CSV file {self.val_csv} does not exist."
+        assert pathlib.Path(self.ddsm_annotations).exists(), f"Annotations file {self.ddsm_annotations} does not exist."
+        
+    
+    def setup(self, stage=None):
+        # Create train, val, test datasets
+        pass # everythin is in get_train_dataloader and get_test_dataloader
+    
+    def train_dataloader(self):
+        
+        transform = transforms.Compose([
+            transforms.RandomAffine(degrees=15, shear=10, scale=(0.8, 1.2)),
+            RandomIntensity(0.8, 1.2),
+            RandomContrast(0.8, 1.2),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+        ])
+        
+        if self.convert_to_rgb:
+            transform.transforms.append(transforms.Lambda(lambda x: x.repeat(3, 1, 1)))
+
+    
+
+        
+        dataset = DDSM_Image_Dataset(self.train_csv, self.ddsm_annotations, self.ddsm_root, 
+                                    convert_to_rgb=False, return_mask=False,
+                                    subset_size=self.subset_size_train, random_seed=self.random_seed,
+                                    num_normal_images_test=self.num_normal_images_test, transform=transform)  
+        
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+        return dataloader
+    
+    def val_dataloader(self):
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        
+        if self.convert_to_rgb:
+            transform.transforms.append(transforms.Lambda(lambda x: x.repeat(3, 1, 1)))
+
+        dataset = DDSM_Image_Dataset(self.val_csv, self.ddsm_annotations, self.ddsm_root, 
+                                    convert_to_rgb=False, return_mask=False,
+                                    subset_size=self.subset_size_test, random_seed=self.random_seed,
+                                    num_normal_images_test=self.num_normal_images_test, transform=transform)  
+        
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        return dataloader

@@ -53,3 +53,28 @@ def get_patch_model(model_name, num_classes = 5,  **kwargs):
     
     
     raise ValueError(f"Model {model_name} not found.")
+
+
+def get_image_model(model_name, num_classes = 2,  **kwargs):
+    """
+    Get the model class based on the model name.
+
+    Args:
+        model_name (str): The name of the model.
+
+    Returns:
+        The model class.
+    """
+    if model_name == "nikulin":
+        print("Using nikulin model")
+        from .nikulin import NikulinImage
+        model =  NikulinImage()
+        if "ckpt_path" in kwargs:
+            print("Loading weights from", kwargs["ckpt_path"])
+            model.load_weights_from_tf(kwargs["ckpt_path"])
+        
+        return model
+    
+    
+    
+    raise ValueError(f"Model {model_name} not found.")
