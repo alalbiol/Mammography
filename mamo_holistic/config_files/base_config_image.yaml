@@ -8,10 +8,10 @@ Datamodule:
   val_csv: resources/ddsm/DDSM_test.csv
   ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
   ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_1152x896
-  eval_patches_root: /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_224
   batch_size: 8
   num_workers: 8
   pin_memory: True
+  dream_pilot_folder: /home/alalbiol/Data/mamo/dream_pilot_png_832x1152
   #subset_size_train: 1000
   #subset_size_test: 100
 
@@ -25,7 +25,8 @@ Logger:
 LightningModule:
   model_name: nikulin
   model_params:
-    ckpt_path: /home/alalbiol/Programacion/mammography/others/nikulin/data/SC1_nets/Final_Round_RC1/best_model.ckpt-3750
+    #ckpt_path: /home/alalbiol/Programacion/mammography/others/nikulin/data/SC1_nets/Final_Round_RC1/best_model.ckpt-3750
+    ckpt_path: /home/alalbiol/Programacion/mammography/others/nikulin/data/SC1_nets/3rd_Round_RC1/best_model.ckpt-3500
   learning_rate: 0.001
   optimizer_type: adam
   num_classes: 5

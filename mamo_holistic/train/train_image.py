@@ -157,6 +157,9 @@ class DDSMImageClassifier(pl.LightningModule):
     def on_validation_epoch_start(self):
         self.val_outputs = torch.empty(0,  device='cpu')
         self.val_targets = torch.empty(0, dtype=torch.long, device='cpu')
+        
+    def on_test_epoch_start(self):
+        self.on_validation_epoch_start()
     
     def validation_step(self, batch, batch_idx):
         x = batch[0]
@@ -187,14 +190,8 @@ class DDSMImageClassifier(pl.LightningModule):
 
         return loss
     
-    # def test_step(self, batch, batch_idx):
-    #     x, y = batch
-    #     y_hat = self(x)
-    #     loss = F.cross_entropy(y_hat, y)
-    #     acc = (y_hat.argmax(dim=1) == y).float().mean()
-    #     self.log("test_loss", loss)
-    #     self.log("test_acc", acc)
-    #     return loss
+    def test_step(self, batch, batch_idx):
+        return self.validation_step(batch, batch_idx)
     
     # compute training metrics at the end of training epoch
     def on_train_epoch_end(self):
@@ -275,7 +272,8 @@ class DDSMImageClassifier(pl.LightningModule):
             experiment.log({"val PR curve": wandb.Image(fig2img(fig_pr))})
             
    
-    
+    def on_test_epoch_end(self):
+        self.on_validation_epoch_end()
 
 def get_logger(config):
     # Check if the logger is set to WandB
@@ -365,6 +363,8 @@ if __name__ == "__main__":
         trainer.fit(model, data_module)
     elif args.task == "validate":
         trainer.validate(model, data_module)
+    elif args.task == "test":
+        trainer.test(model, data_module)    
     else:
         raise ValueError(f"Unknown task {args.task}")
     

@@ -1,4 +1,3 @@
-import os
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets
@@ -12,7 +11,7 @@ import cv2
 import pytorch_lightning as pl
 from utils.load_config import  get_parameter
 import gzip
-from utils.transforms import RandomContrast, RandomIntensity
+from utils.transforms import RandomContrast, RandomIntensity, Standardize
 
 
 
@@ -956,7 +955,31 @@ class DDSM_Image_Dataset(Dataset):
             return image, label, mask
         return image, label
     
+
+
+class DreamPilot_Image_Dataset(Dataset):
+    def __init__(self, dream_pilot_folder, transform = None):
+        self.dream_pilot_folder = pathlib.Path(dream_pilot_folder)
+        self.transform = transform
+        
+        self.image_crosswalk = pd.read_csv(self.dream_pilot_folder / 'images_crosswalk.tsv', sep='\t')
+        
+    def __len__(self):
+        return len(self.image_crosswalk)
     
+    def __getitem__(self, idx):
+        image_id = self.image_crosswalk.iloc[idx]['filename'].replace('.dcm', '.png')
+        image_path = self.dream_pilot_folder / image_id
+        image = Image.open(image_path)
+        
+        label = self.image_crosswalk.iloc[idx]['cancer']
+        
+        if self.transform is not None:
+            image = self.transform(image)
+        
+        return image, label
+        
+
 # Data Module to handle data loading and transformations
 
 class DDSMImageDataModule(pl.LightningDataModule):
@@ -983,6 +1006,8 @@ class DDSMImageDataModule(pl.LightningDataModule):
         self.subset_size_train = get_parameter(config, ['Datamodule', 'subset_size_train'], default=None)
         self.subset_size_test = get_parameter(config, ['Datamodule', 'subset_size_test'], default=None)
         
+        self.dream_pilot_folder = get_parameter(config, ['Datamodule', 'dream_pilot_folder'], default=None)
+        
         
     def prepare_data(self):
         # Download or prepare the data if needed
@@ -990,6 +1015,8 @@ class DDSMImageDataModule(pl.LightningDataModule):
         assert pathlib.Path(self.train_csv).exists(), f"Split CSV file {self.train_csv} does not exist."
         assert pathlib.Path(self.val_csv).exists(), f"Split CSV file {self.val_csv} does not exist."
         assert pathlib.Path(self.ddsm_annotations).exists(), f"Annotations file {self.ddsm_annotations} does not exist."
+        if self.dream_pilot_folder is not None:
+            assert pathlib.Path(self.dream_pilot_folder).exists(), f"Dream pilot folder {self.dream_pilot_folder} does not exist."
         
     
     def setup(self, stage=None):
@@ -1004,6 +1031,7 @@ class DDSMImageDataModule(pl.LightningDataModule):
             RandomContrast(0.8, 1.2),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
+            Standardize()
         ])
         
         if self.convert_to_rgb:
@@ -1023,6 +1051,7 @@ class DDSMImageDataModule(pl.LightningDataModule):
     def val_dataloader(self):
         transform = transforms.Compose([
             transforms.ToTensor(),
+            Standardize()
         ])
         
         if self.convert_to_rgb:
@@ -1033,5 +1062,19 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                     subset_size=self.subset_size_test, random_seed=self.random_seed,
                                     num_normal_images_test=self.num_normal_images_test, transform=transform)  
         
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        return dataloader
+    
+    def test_dataloader(self):
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            Standardize()
+        ])
+        
+        if self.convert_to_rgb:
+            transform.transforms.append(transforms.Lambda(lambda x: x.repeat(3, 1, 1)))
+            
+        
+        dataset = DreamPilot_Image_Dataset(self.dream_pilot_folder, transform=transform)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
         return dataloader
