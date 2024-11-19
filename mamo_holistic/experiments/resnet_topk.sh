@@ -1,4 +1,4 @@
-!#/bin/bash
+#!/bin/bash
 
 # This script is used to run the experiments selecting only hard background patches for the loss computation.
 

@@ -1,4 +1,4 @@
-!#/bin/bash
+#!/bin/bash
 
 # This script is used to run the experiments for the Nikulin dataset with different sizes of patches.
 

@@ -1,4 +1,4 @@
-!#/bin/bash
+#!/bin/bash
 
 # This script is used to run the experiments to see resnet18, resnet34, resnet50 with 224x224 patches.
 
