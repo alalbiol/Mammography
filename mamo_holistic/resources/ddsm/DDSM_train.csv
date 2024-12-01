@@ -2341,10 +2341,6 @@ cancers/cancer_15/case3085/B_3085_1.LEFT_CC.png,train
 cancers/cancer_15/case3085/B_3085_1.RIGHT_MLO.png,train
 cancers/cancer_15/case3085/B_3085_1.LEFT_MLO.png,train
 cancers/cancer_15/case3085/B_3085_1.RIGHT_CC.png,train
-cancers/cancer_15/case3043/B_3043_1.RIGHT_MLO.png,train
-cancers/cancer_15/case3043/B_3043_1.RIGHT_CC.png,train
-cancers/cancer_15/case3043/B_3043_1.LEFT_MLO.png,train
-cancers/cancer_15/case3043/B_3043_1.LEFT_CC.png,train
 cancers/cancer_15/case3395/B_3395_1.RIGHT_MLO.png,train
 cancers/cancer_15/case3395/B_3395_1.RIGHT_CC.png,train
 cancers/cancer_15/case3395/B_3395_1.LEFT_MLO.png,train
@@ -2391,10 +2387,6 @@ cancers/cancer_15/case3371/B_3371_1.LEFT_CC.png,train
 cancers/cancer_15/case3371/B_3371_1.RIGHT_MLO.png,train
 cancers/cancer_15/case3371/B_3371_1.LEFT_MLO.png,train
 cancers/cancer_15/case3371/B_3371_1.RIGHT_CC.png,train
-cancers/cancer_15/case0005/C_0005_1.RIGHT_MLO.png,train
-cancers/cancer_15/case0005/C_0005_1.LEFT_CC.png,train
-cancers/cancer_15/case0005/C_0005_1.LEFT_MLO.png,train
-cancers/cancer_15/case0005/C_0005_1.RIGHT_CC.png,train
 cancers/cancer_15/case3399/B_3399_1.RIGHT_CC.png,train
 cancers/cancer_15/case3399/B_3399_1.RIGHT_MLO.png,train
 cancers/cancer_15/case3399/B_3399_1.LEFT_MLO.png,train
