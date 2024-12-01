@@ -982,8 +982,6 @@
 /media/data/DDSM/cases/normals/normal_08/case4607/D_4607_1.LEFT_MLO.png
 /media/data/DDSM/cases/benigns/benign_06/case3424/B_3424_1.RIGHT_CC.png
 /media/data/DDSM/cases/benigns/benign_06/case3424/B_3424_1.RIGHT_MLO.png
-/media/data/DDSM/cases/cancers/cancer_15/case3043/B_3043_1.LEFT_CC.png
-/media/data/DDSM/cases/cancers/cancer_15/case3043/B_3043_1.LEFT_MLO.png
 /media/data/DDSM/cases/benigns/benign_02/case1333/A_1333_1.LEFT_CC.png
 /media/data/DDSM/cases/benigns/benign_02/case1333/A_1333_1.LEFT_MLO.png
 /media/data/DDSM/cases/normals/normal_02/case0296/A_0296_1.LEFT_CC.png
@@ -2014,8 +2012,6 @@
 /media/data/DDSM/cases/cancers/cancer_06/case1121/A_1121_1.LEFT_MLO.png
 /media/data/DDSM/cases/benigns/benign_02/case1328/A_1328_1.LEFT_CC.png
 /media/data/DDSM/cases/benigns/benign_02/case1328/A_1328_1.LEFT_MLO.png
-/media/data/DDSM/cases/cancers/cancer_15/case0005/C_0005_1.LEFT_CC.png
-/media/data/DDSM/cases/cancers/cancer_15/case0005/C_0005_1.LEFT_MLO.png
 /media/data/DDSM/cases/cancers/cancer_15/case0360/C_0360_1.LEFT_CC.png
 /media/data/DDSM/cases/cancers/cancer_15/case0360/C_0360_1.LEFT_MLO.png
 /media/data/DDSM/cases/cancers/cancer_02/case0086/C_0086_1.LEFT_CC.png
@@ -3974,8 +3970,6 @@
 /media/data/DDSM/cases/cancers/cancer_05/case0152/C_0152_1.LEFT_MLO.png
 /media/data/DDSM/cases/normals/normal_11/case1968/A_1968_1.LEFT_CC.png
 /media/data/DDSM/cases/normals/normal_11/case1968/A_1968_1.LEFT_MLO.png
-/media/data/DDSM/cases/cancers/cancer_15/case0005/C_0005_1.RIGHT_CC.png
-/media/data/DDSM/cases/cancers/cancer_15/case0005/C_0005_1.RIGHT_MLO.png
 /media/data/DDSM/cases/cancers/cancer_03/case1007/A_1007_1.RIGHT_CC.png
 /media/data/DDSM/cases/cancers/cancer_03/case1007/A_1007_1.RIGHT_MLO.png
 /media/data/DDSM/cases/benigns/benign_13/case0415/C_0415_1.RIGHT_CC.png
@@ -4332,8 +4326,6 @@
 /media/data/DDSM/cases/benigns/benign_02/case1314/A_1314_1.LEFT_MLO.png
 /media/data/DDSM/cases/normals/normal_02/case0319/A_0319_1.RIGHT_CC.png
 /media/data/DDSM/cases/normals/normal_02/case0319/A_0319_1.RIGHT_MLO.png
-/media/data/DDSM/cases/cancers/cancer_15/case3043/B_3043_1.RIGHT_CC.png
-/media/data/DDSM/cases/cancers/cancer_15/case3043/B_3043_1.RIGHT_MLO.png
 /media/data/DDSM/cases/normals/normal_07/case4577/D_4577_1.RIGHT_CC.png
 /media/data/DDSM/cases/normals/normal_07/case4577/D_4577_1.RIGHT_MLO.png
 /media/data/DDSM/cases/benigns/benign_12/case1937/A_1937_1.LEFT_CC.png
