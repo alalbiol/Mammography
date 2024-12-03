@@ -139,7 +139,8 @@ def sample_patches(img, roi_mask, out_dir, mask_id, bounding_box, patch_size=256
                 bening_mass_dir='benign_mass',
                 bening_calc_dir='benign_calc', 
                 save_patch_mask=True,
-                verbose=False):
+                verbose=False,
+                standarize_img=False):
 
     """Sample positive and negative patches from an image. 
     
@@ -161,6 +162,7 @@ def sample_patches(img, roi_mask, out_dir, mask_id, bounding_box, patch_size=256
     malignant_dir: str, the malignant directory.
     bening_dir: str, the benign directory.
     verbose: bool, print out debug info.
+    standarize_img: bool, standarize the image before cropping and save npy instead of png.
 
     Returns:
     abn_bbs: list with abnormal bounding boxes. [xmin, ymin, w, h] 
@@ -202,15 +204,25 @@ def sample_patches(img, roi_mask, out_dir, mask_id, bounding_box, patch_size=256
     assert rx + rw < img.shape[1], f"rx + rw < img.shape[1], {rx + rw} < {img.shape[1]}"
     assert ry + rh < img.shape[0], f"ry + rh < img.shape[0], {ry + rh} < {img.shape[0]}"
     
+    if standarize_img:
+        img = img.astype('float32')
+        img = (img - img.mean())/img.std()
+    
     
     img = add_img_margins(img, patch_size//2)
     roi_mask = add_img_margins(roi_mask, patch_size//2)
+    
+    # import matplotlib.pyplot as plt
+    # fig, ax =plt.subplots(1,1)
+    # ax.imshow(img, cmap='gray')
+    # ax.imshow(roi_mask, cmap='gray', alpha=.5)
+    # plt.show()
+    
+    
 
     abn_bbs = [] # abnormal bounding boxes 
     bkg_bbs = [] # background bounding boxes
 
-    
-    
     # Sample abnormality first.
     sampled_abn = 0
     nb_try = 0
@@ -237,16 +249,15 @@ def sample_patches(img, roi_mask, out_dir, mask_id, bounding_box, patch_size=256
             assert y >= 0, "y >= 0" 
             
             abn_bbs.append((x, y, patch_size, patch_size))
-            patch_img = Image.fromarray(patch.astype('int32'), mode='I')
-            filename = f"{basename}_{sampled_abn:04d}_img.png"
-            fullname = abn_dir / filename
-            
-            # print(fullname)
-            # print(patch_img.size)
-            # print(x, y, img.shape)
-            # print(f"{rx=} {ry=} {rw=} {rh=}")
-            
-            patch_img.save(str(fullname))
+            if standarize_img:
+                filename = f"{basename}_{sampled_abn:04d}_img.npy"
+                fullname = abn_dir / filename
+                np.save(str(fullname), patch)
+            else:
+                patch_img = Image.fromarray(patch.astype('int32'), mode='I')
+                filename = f"{basename}_{sampled_abn:04d}_img.png"
+                fullname = abn_dir / filename
+                patch_img.save(str(fullname))
         
             
             if save_patch_mask:
@@ -258,8 +269,6 @@ def sample_patches(img, roi_mask, out_dir, mask_id, bounding_box, patch_size=256
                 filename = f"{basename}_{sampled_abn:04d}_mask.png"
                 fullname = abn_dir / filename
                 patch_mask_img.save(str(fullname))
-            
-            
             sampled_abn += 1
             nb_try = 0
             if verbose:
@@ -274,10 +283,16 @@ def sample_patches(img, roi_mask, out_dir, mask_id, bounding_box, patch_size=256
                         x :x + patch_size]
             
             bkg_bbs.append((x, y, patch_size, patch_size))
-            patch_img = Image.fromarray(patch.astype('int32'), mode='I')
-            filename =f"{basename}_{sampled_bkg:04d}_img.png"
-            fullname = bkg_dir / filename
-            patch_img.save(str(fullname))
+            
+            if standarize_img:
+                filename = f"{basename}_{sampled_bkg:04d}_img.npy"
+                fullname = bkg_dir / filename
+                np.save(str(fullname), patch)
+            else:
+                patch_img = Image.fromarray(patch.astype('int32'), mode='I')
+                filename =f"{basename}_{sampled_bkg:04d}_img.png"
+                fullname = bkg_dir / filename
+                patch_img.save(str(fullname))
                 
             if save_patch_mask:
                 patch_mask = roi_mask[y:y + patch_size,
@@ -298,7 +313,7 @@ def sample_hard_negatives(img:np.array, roi_mask:np.array, out_dir, mask_id:str,
                         bounding_box: list,   
                         patch_size=256, neg_cutoff=.35, nb_bkg=100, 
                         bkg_dir='background', 
-                        save_patch_mask=True, verbose=False):
+                        save_patch_mask=True, verbose=False, standarize_img=False):
     """Samples hard negative patches from an image with an abnomality ie. near the ROI but not overlapping more
     than the cutoff. The function samples many patches and accepts only those that do not overlap.
 
@@ -339,6 +354,9 @@ def sample_hard_negatives(img:np.array, roi_mask:np.array, out_dir, mask_id:str,
     assert rx + rw < img.shape[1], f"rx + rw < img.shape[1], {rx + rw} < {img.shape[1]}"
     assert ry + rh < img.shape[0], f"ry + rh < img.shape[0], {ry + rh} < {img.shape[0]}"
     
+    if standarize_img:
+        img = img.astype('float32')
+        img = (img - img.mean())/img.std()
     
     img = add_img_margins(img, patch_size//2)
     roi_mask = add_img_margins(roi_mask, patch_size//2)
@@ -360,10 +378,16 @@ def sample_hard_negatives(img:np.array, roi_mask:np.array, out_dir, mask_id:str,
         if not overlap_patch_roi((x+patch_size //2,y+patch_size //2), patch_size, roi_mask, cutoff=neg_cutoff):
             patch = img[y :y + patch_size, x :x + patch_size]
             bkg_bbs.append((x, y, patch_size, patch_size))
-            patch_img = Image.fromarray(patch.astype('int32'), mode='I')
-            filename =f"{basename}_{sampled_bkg:04d}_img.png"
-            fullname = bkg_dir / filename
-            patch_img.save(str(fullname))
+            
+            if standarize_img:
+                filename = f"{basename}_{sampled_bkg:04d}_img.npy"
+                fullname = bkg_dir / filename
+                np.save(str(fullname), patch)
+            else:
+                patch_img = Image.fromarray(patch.astype('int32'), mode='I')
+                filename =f"{basename}_{sampled_bkg:04d}_img.png"
+                fullname = bkg_dir / filename
+                patch_img.save(str(fullname))
 
             if save_patch_mask:
                 patch_mask = roi_mask[y:y + patch_size, x:x + patch_size]
@@ -382,7 +406,7 @@ def sample_blob_negatives(img: np.array, roi_mask: np.array , out_dir:str, mask_
                         blob_detector, 
                         patch_size=256, neg_cutoff=.35, nb_bkg=100, 
                         bkg_dir='background', 
-                        save_patch_mask=True, verbose=False):
+                        save_patch_mask=True, verbose=False, standarize_img=False):
     
     """Samples negative patches from an image with or without an abnormality
     The center of the patches are sampled from the blobs detected by the blob_detector.
@@ -418,6 +442,10 @@ def sample_blob_negatives(img: np.array, roi_mask: np.array , out_dir:str, mask_
     
     basename = mask_id.split('/')[-1].replace('.png', '') #D_4124_1.RIGHT_CC_MASS_MALIGNANT_mask_0
 
+    if standarize_img:
+        img = img.astype('float32')
+        img = (img - img.mean())/img.std()
+
     img = add_img_margins(img, patch_size//2)
     roi_mask = add_img_margins(roi_mask, patch_size//2)
     # Get ROI bounding box.
@@ -439,9 +467,15 @@ def sample_blob_negatives(img: np.array, roi_mask: np.array , out_dir:str, mask_
                         x - patch_size//2:x + patch_size//2]
             bkg_bbs.append((x, y, patch_size, patch_size))
             patch_img = Image.fromarray(patch.astype('int32'), mode='I')
-            filename =f"{basename}_{sampled_bkg:04d}_img.png"
-            fullname = bkg_dir / filename
-            patch_img.save(str(fullname))
+            
+            if standarize_img:
+                filename = f"{basename}_{sampled_bkg:04d}_img.npy"
+                fullname = bkg_dir / filename
+                np.save(str(fullname), patch)
+            else:
+                filename =f"{basename}_{sampled_bkg:04d}_img.png"
+                fullname = bkg_dir / filename
+                patch_img.save(str(fullname))
             
             if save_patch_mask:
                 patch_mask = roi_mask[y - patch_size//2:y + patch_size//2,

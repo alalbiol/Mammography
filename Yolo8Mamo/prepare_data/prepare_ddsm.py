@@ -43,6 +43,20 @@ def npy2png(npy_file, png_file, delete_npy=True):
     return im
 
 
+def npy2png_noclipping(npy_file, png_file, delete_npy=True):
+    """Same as before without clipping. Images are stored as 16bit."""
+    im = np.load(npy_file)
+    im = 3 - 3 * (im / 65535.)
+    # convert to 16 bit
+    im = (65535 * im / im.max()).astype(np.uint16)
+    cv2.imwrite(png_file, im)
+    
+    #delete npy
+    if delete_npy:
+        npy_file.unlink()
+    
+    return im
+
 
 #S=float(sys.argv[1])
 
@@ -76,9 +90,10 @@ def npy2png(npy_file, png_file, delete_npy=True):
 
 
 class PrepareDDSM(object):
-    def __init__(self, ddsm_dir_in, ddsm_dir_out) -> None:
+    def __init__(self, ddsm_dir_in, ddsm_dir_out, dezso_clipping = True) -> None:
         self.ddsm_dir_in = pathlib.Path(ddsm_dir_in)
         self.ddsm_dir_out = pathlib.Path(ddsm_dir_out)
+        self.dezso_clipping = dezso_clipping
         
         self.cases = self.get_cases()
 
@@ -114,7 +129,11 @@ class PrepareDDSM(object):
                 
         for npy_file in npy_files:
             png_file = case_folder_out / (npy_file.stem + '.png')
-            npy2png(npy_file, str(png_file), delete_npy=True)
+            if self.dezso_clipping:
+                npy2png(npy_file, str(png_file), delete_npy=True)
+            else:
+                print("Using no clipping")
+                npy2png_noclipping(npy_file, str(png_file), delete_npy=True)
             print("Converted: ", png_file)
             
     def copy_overlays_case(self, case):
@@ -145,18 +164,22 @@ class PrepareDDSM(object):
 
 import argparse
 
+str2bool = lambda x: (str(x).lower() == 'true')
+
 if __name__=="__main__":
     
     parser = argparse.ArgumentParser(description='Prepare DDSM data')
-    parser.add_argument('--ddsm_dir_in', default='/home/alalbiol/Data/mamo/cases', type=str, help='Path to the DDSM data')
-    parser.add_argument('--ddsm_dir_out',default='/tmp/ddsm/', type=str, help='Path to the DDSM data')
+    parser.add_argument('--ddsm_dir_in', default='/media/HD/mamo/DDSM_LJPEG/cases', type=str, help='Path to the DDSM data')
+    parser.add_argument('--ddsm_dir_out',default='/media/HD/mamo/DDSM_png_noclipping/cases', type=str, help='Path to the DDSM data')
+    parser.add_argument('--dezso_clipping', default=False, type=str2bool, help='Use Dezso clipping')
+    parser.add_argument('--force_redo', default=False, type=str2bool, help='Force redo')
     
     args = parser.parse_args()
     
-    ddsm = PrepareDDSM(args.ddsm_dir_in, args.ddsm_dir_out)
+    ddsm = PrepareDDSM(args.ddsm_dir_in, args.ddsm_dir_out, args.dezso_clipping)
     
     start_time = time.time()
-    ddsm.convert_all_cases(force_redo=True, parallel=True)
+    ddsm.convert_all_cases(force_redo=args.force_redo, parallel=True)
     
     print("--- %s seconds ---" % (time.time() - start_time))
     
