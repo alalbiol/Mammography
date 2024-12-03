@@ -30,14 +30,23 @@ def read_annotations(annotations_file):
 
 
 
-def evaluate_dataset(dataset_path, model_weights):
+def evaluate_dataset(dataset_path, model_weights, model_name):
     dataset_path = pathlib.Path(dataset_path)
     
     images_folder = dataset_path / 'images'
+    output_folder = dataset_path / model_name
+    if not output_folder.exists():
+        output_folder.mkdir(parents=True, exist_ok=True)
+    
+    
     yolo_model = YOLO(model_weights)
+    yolo_model.model.conf = 0.001
+    
     
     
     all_images = list(images_folder.glob('*.png'))
+    if len(all_images) == 0:
+        print("No images found in the dataset folder:", images_folder)
     print(f"Evaluating dataset with {len(all_images)} images")
     
     all_predictions = []
@@ -45,6 +54,7 @@ def evaluate_dataset(dataset_path, model_weights):
     
     for ind, image_path in tqdm(enumerate(all_images)):
         labels_path = dataset_path / 'labels' / (image_path.stem + '.txt')
+        predictions_path = output_folder / (image_path.stem + '.txt')
         gt = read_annotations(labels_path)
         all_gt.append(gt)
         
@@ -107,33 +117,31 @@ def evaluate_dataset(dataset_path, model_weights):
         #for result in results[0]:
         
         result = results[0]
-        if len(result.boxes) == 0:
-            predictions.append([0, 0, 0, 0, 0, 0])
-        else:        
+        
+        with open(predictions_path, 'w') as f:
             for box in result.boxes:
             
                 coords = box.xyxyn.cpu().numpy()[0]
                 class_id = box.cls.item()
                 confidence = box.conf.item()
                 
-                predictions.append([coords[0], coords[1], coords[2], coords[3], class_id, confidence])
-        all_predictions.append(np.array(predictions))
+                
+                xc = (coords[0] + coords[2])/2
+                yc = (coords[1] + coords[3])/2
+                w = coords[2] - coords[0]
+                h = coords[3] - coords[1]
+                
+                f.write(f"{class_id} {xc} {yc} {w} {h} {confidence}\n")
+
+                if class_id==1 and confidence >0:
+                    print("Found example: ", predictions_path)
+                     
+                       
         
-        # if ind > 100:
-        #     break
         
     print("Finished evaluating dataset")
     
     all_predictions = all_predictions
-    all_gt = all_gt
-    
-    
-    
-    mean_average_precison = sv.MeanAveragePrecision.from_tensors(
-    predictions=all_predictions,
-    targets=all_gt)
-
-    print(mean_average_precison.map50)
     
     return
 
@@ -141,8 +149,9 @@ def evaluate_dataset(dataset_path, model_weights):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate test dataset with YOLO model.')
-    parser.add_argument('dataset_path',  type=str, help='Path to the original dataset')
-    parser.add_argument('model_weights', type=str, help='Path to trained weights')
+    parser.add_argument('--dataset_path',  type=str, help='Path to the original dataset')
+    parser.add_argument('--model_weights', type=str, help='Path to trained weights')
+   
     args = parser.parse_args()
     
     
@@ -150,8 +159,12 @@ if __name__ == "__main__":
     
     dataset_path = pathlib.Path(args.dataset_path)
     
+    model_name = args.model_weights.split('/')[-3]
+    
+    print("Model Name:", model_name)
+    
     images_folder = dataset_path / 'images'
     yolo_model = YOLO(args.model_weights)
-    evaluate_dataset(args.dataset_path, args.model_weights)
+    evaluate_dataset(args.dataset_path, args.model_weights, model_name)
     
     

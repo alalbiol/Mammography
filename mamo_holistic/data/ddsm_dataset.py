@@ -71,14 +71,12 @@ class IdentityTransform:
     def generate(self, center = None):
         return sitk.AffineTransform(2)
 
-
     
 #patch policy:
 # For normal images:
 # 1. n random crops, m crops at blob positions
 # For abnormal images:
 # 1. n random positive crops, m crops at blob positions, n hard negative crops, m random negative crops
-
 class PatchSampler(object):
     def __init__(self, patch_size: int, 
                  n_positive_crops=1, 
@@ -432,7 +430,8 @@ class DDSM_Patch_Dataset(Dataset):
                  return_mask=False,
                  patch_sampler = None,
                  subset_size = None, 
-                 include_normals = True):
+                 include_normals = True,
+                 normalize_input = False):
         
         self.split_csv = split_csv
         self.root_dir = pathlib.Path(root_dir)
@@ -440,6 +439,7 @@ class DDSM_Patch_Dataset(Dataset):
         self.patch_sampler = patch_sampler
         self.convert_to_rgb = convert_to_rgb
         self.include_normals = include_normals # include normal images in the dataset
+        self.normalize_input = normalize_input
         
         self.ddsm_annotations = self.load_annotations(split_csv, ddsm_annotations)
         
@@ -551,7 +551,6 @@ class DDSM_Patch_Dataset(Dataset):
         
         return annotations
 
-
     def __len__(self):
         return len(self.ddsm_annotations)
 
@@ -562,6 +561,17 @@ class DDSM_Patch_Dataset(Dataset):
         image_id = self.ddsm_annotations.iloc[idx]['image_id']
         image_path = self.root_dir / image_id
         image = np.array(Image.open(image_path))
+        
+        if image.dtype != np.float32:
+            image = image.astype(np.float32)
+        
+        if self.normalize_input:
+            image_std = image.std()
+            if image_std == 0:
+                print(f"Image std is 0 for image {image_path}, skipping normalization")
+                image_std = 1.0
+            
+            image = (image - image.mean()) / image_std
         
         if self.return_mask:
             mask_id = self.ddsm_annotations.iloc[idx]['mask_id']
@@ -591,6 +601,15 @@ class DDSM_Patch_Dataset(Dataset):
         
         image_patches = np.array(image_patches)
         
+        # random contrast
+        num_patches = image_patches.shape[0]
+        contrast_factors = np.random.uniform(0.8, 1.2, num_patches).reshape(-1, 1, 1)
+        image_patches = image_patches * contrast_factors
+            
+        # random shift intensity
+        intensity_shifts = np.random.uniform(-0.1, 0.1, num_patches).reshape(-1, 1, 1)
+        image_patches = image_patches + intensity_shifts 
+        
         image_patches = np.expand_dims(image_patches, axis=1)
         if self.convert_to_rgb:
             image_patches = np.repeat(image_patches, 3, axis=1)
@@ -617,7 +636,10 @@ class ConvertToFloat32:
 
 
 class DDSM_patch_eval(datasets.ImageFolder):
-    def __init__(self, root, transform=None, convert_to_rgb = True, return_mask = False, subset_size = None):
+    def __init__(self, root, transform=None, 
+                 convert_to_rgb = True, 
+                 normalize_input = False,
+                 return_mask = False, subset_size = None):
         # Call the parent constructor
         #create lambda transform function to cast to float32
         
@@ -626,6 +648,7 @@ class DDSM_patch_eval(datasets.ImageFolder):
             transform = transforms.Compose([ConvertToFloat32()])
         self.convert_to_rgb = convert_to_rgb
         self.return_mask = return_mask
+        self.normalize_input = normalize_input
             
         def custom_loader(path):
             # Open the image as grayscale ('L' mode)
@@ -721,6 +744,8 @@ def collate_fn(batch):
     
     if patch_images.dtype == np.uint8:
         patch_images = torch.tensor(patch_images, dtype=torch.float32) / 255.0
+    elif patch_images.dtype == np.int16:
+        patch_images = torch.tensor(patch_images, dtype=torch.float32) / 32767.0
     else:
         patch_images = torch.tensor(patch_images, dtype=torch.float32)
         
@@ -731,10 +756,9 @@ def collate_fn(batch):
     return patch_images, patch_labels
 
 
-
 def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batch_size=32, 
                          convert_to_rgb = True, shuffle=True, num_workers=4, return_mask=False, 
-                         subset_size=None, include_normals=True):
+                         subset_size=None, include_normals=True, normalize_input = False):  
     
     
     affine_transform = RandomAffineTransform()
@@ -744,22 +768,23 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batc
     patch_sampler = PatchSampler(patch_size, affine_transform=affine_transform,
                                 n_positive_crops = 1, 
                                 n_hard_negative_crop=1,
-                                n_blob_crops=1,
-                                n_random_crops=1)
+                                n_blob_crops=0,
+                                n_random_crops=0)
 
     dataset = DDSM_Patch_Dataset(split_csv, ddsm_annotations, root_dir, 
                                 return_mask= return_mask, patch_sampler = patch_sampler,
                                 convert_to_rgb = convert_to_rgb,
                                 subset_size = subset_size,
-                                include_normals=include_normals)
+                                include_normals=include_normals,
+                                normalize_input = normalize_input)
 
     
 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn)
     return dataloader
 
-def get_test_dataloader(patches_root, batch_size=32, return_mask=False, convert_to_rgb = True, subset_size=None):
-    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, convert_to_rgb= convert_to_rgb, subset_size=subset_size)
+def get_test_dataloader(patches_root, batch_size=32, return_mask=False, convert_to_rgb = True, subset_size=None, normalize_input = False):
+    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, convert_to_rgb= convert_to_rgb, subset_size=subset_size, normalize_input = normalize_input)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     return dataloader
 
@@ -771,6 +796,7 @@ class DDSMPatchDataModule(pl.LightningDataModule):
         super().__init__()
         self.patch_size = get_parameter(config, ['Datamodule', 'patch_size'])
         self.convert_to_rgb = get_parameter(config, ["Datamodule", "convert_to_rgb"], default=True)
+        self.normalize_input = get_parameter(config, ["Datamodule", "normalize_input"], default=False)   
         self.ddsm_root = get_parameter(config, ['Datamodule', 'ddsm_root'])
         self.batch_size = get_parameter(config, ['Datamodule', 'batch_size'])
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
@@ -810,12 +836,14 @@ class DDSMPatchDataModule(pl.LightningDataModule):
                                     convert_to_rgb=self.convert_to_rgb,
                                     shuffle=True, num_workers=self.num_workers, 
                                     return_mask=False, subset_size=self.subset_size_train,
-                                    include_normals=self.include_normals)
+                                    include_normals=self.include_normals,
+                                    normalize_input = self.normalize_input)
     
     def val_dataloader(self):
         return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, 
                                    convert_to_rgb=self.convert_to_rgb,
-                                   return_mask=False, subset_size=self.subset_size_test)
+                                   return_mask=False, subset_size=self.subset_size_test,
+                                   normalize_input = self.normalize_input)
         
     
     def test_dataloader(self):

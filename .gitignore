@@ -4,3 +4,6 @@ Yolo8Mamo/train_yolo/runs/*
 *.pyo
 __pycache__/*
 *.log
+Nikulin/package/*
+*.pt
+mamo_holistic/lightning_logs/*

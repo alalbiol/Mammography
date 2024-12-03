@@ -1,6 +1,7 @@
 Datamodule:
   patch_size: 224
   convert_to_rgb: False
+  normalize_input: True
 
 Logger:
   name: model_nikulin_224
