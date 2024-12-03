@@ -7,6 +7,7 @@ Datamodule:
   train_csv: resources/ddsm/DDSM_train.csv
   val_csv: resources/ddsm/DDSM_test.csv
   ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
+  #ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_1152x896
   ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_1152x896
   batch_size: 8
   num_workers: 8
