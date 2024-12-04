@@ -135,8 +135,9 @@ class DDSMPatchClassifier(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x = batch[0]
         y = batch[1]
-        
-        
+        #mask = batch[2]
+
+    
         #check if mixup is enabled
         if  self.mixup_alpha > 0:
             x, y_a, y_b, lam = mixup_data(x, y, self.mixup_alpha)
@@ -189,6 +190,7 @@ class DDSMPatchClassifier(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x = batch[0]
         y = batch[1]
+        #mask = batch[2]
         
         logits = self(x)
         loss = self.loss_fn(logits, y)
@@ -378,6 +380,9 @@ def create_callbacks(config):
         elif callback_name == "LearningRateWarmUp":
             from utils.callbacks import LearningRateWarmUpCallback
             callbacks.append(LearningRateWarmUpCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "VisualizeBatchPathes":
+            from utils.callbacks import VisualizeBatchPatchesCallback
+            callbacks.append(VisualizeBatchPatchesCallback(**callbacks_dict[callback_name]))
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
     return callbacks

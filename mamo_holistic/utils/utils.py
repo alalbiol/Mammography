@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 
-def show_mask_image(image_path, mask_path,ax = None, points = None):
+def show_mask_image(image_path, mask_path,ax = None, points = None, title = None):
     if isinstance(image_path, (pathlib.Path, str)):
         image_path = str(image_path)
         img = np.array(Image.open(image_path))
@@ -27,10 +27,14 @@ def show_mask_image(image_path, mask_path,ax = None, points = None):
         plt.imshow(img, cmap='gray')
         plt.imshow(red_mask, alpha=0.4)
         plt.axis('off')
+        if title is not None:
+            plt.title(title)
     else:
         ax.imshow(img, cmap='gray')
         ax.imshow(red_mask, alpha=0.4)
         ax.axis('off')
+        if title is not None:
+            ax.set_title(title)
         
     if points is not None:
         x = points[:,0]

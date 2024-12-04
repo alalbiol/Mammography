@@ -630,16 +630,17 @@ class DDSM_Patch_Dataset(Dataset):
 class ConvertToFloat32:
     def __call__(self, img):
         # Convert to float and scale from 0-255 to 0-1
-        img = torch.from_numpy(np.array(img)).float() / 255.0
+        img = torch.from_numpy(np.array(img)).float() 
         img.unsqueeze_(0)
         return img
 
 
-class DDSM_patch_eval(datasets.ImageFolder):
+class DDSM_patch_eval(datasets.DatasetFolder):
     def __init__(self, root, transform=None, 
-                 convert_to_rgb = True, 
-                 normalize_input = False,
-                 return_mask = False, subset_size = None):
+                 convert_to_rgb = False, 
+                 format_img = 'png',
+                 return_mask = False, 
+                 subset_size = None):
         # Call the parent constructor
         #create lambda transform function to cast to float32
         
@@ -648,14 +649,29 @@ class DDSM_patch_eval(datasets.ImageFolder):
             transform = transforms.Compose([ConvertToFloat32()])
         self.convert_to_rgb = convert_to_rgb
         self.return_mask = return_mask
-        self.normalize_input = normalize_input
+        self.format_img = format_img
             
         def custom_loader(path):
-            # Open the image as grayscale ('L' mode)
-            return Image.open(path)
-    
+            if '.png' in path:
+                # Open the image as grayscale ('L' mode)
+                img =  Image.open(path)
+                return img
+            elif '.npy' in path:
+                return np.load(path)
+            else:
+                raise ValueError(f"Unknown image format {self.format_img}")
+        
+        extensions = ["."+format_img] 
+        super().__init__(
+            root,
+            loader=custom_loader,
+            extensions=extensions,
+            transform=transform,
+        )
+        self.imgs = self.samples
             
-        super().__init__(root, transform=transform, loader=custom_loader)
+            
+        
         
         self.select_images() # discard the mask images
         
@@ -668,7 +684,10 @@ class DDSM_patch_eval(datasets.ImageFolder):
 
     
     def select_images(self):
-        samples = [sample for sample in self.samples if '_img.png' in sample[0]]
+        image_suffix = '_img.png' if self.format_img == 'png' else '_img.npy'
+        
+        samples = [sample for sample in self.samples if image_suffix in sample[0]]
+        print("Number of samples after filtering: ", len(samples))
         self.samples = samples
         self.targets = [sample[1] for sample in samples]
         
@@ -715,10 +734,10 @@ class DDSM_patch_eval(datasets.ImageFolder):
             sample = sample.repeat(3, 1, 1)
         
         if self.return_mask:
-            mask_path = path.replace('_img.png', '_mask.png')
+            mask_path = path.replace(f'_img.{self.format_img}', '_mask.png')
             mask = self.loader(mask_path)
-            if self.transform is not None:
-                mask = self.transform(mask)
+            mask = np.array(mask)
+
             return sample, target, mask
         else:
             return sample, target
@@ -783,9 +802,9 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batc
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn)
     return dataloader
 
-def get_test_dataloader(patches_root, batch_size=32, return_mask=False, convert_to_rgb = True, subset_size=None, normalize_input = False):
-    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, convert_to_rgb= convert_to_rgb, subset_size=subset_size, normalize_input = normalize_input)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4)
+def get_test_dataloader(patches_root, batch_size=32, return_mask=False, convert_to_rgb = True, subset_size=None, format_img = 'png'):
+    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, convert_to_rgb= convert_to_rgb, subset_size=subset_size, format_img=format_img)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     return dataloader
 
 
@@ -794,25 +813,32 @@ def get_test_dataloader(patches_root, batch_size=32, return_mask=False, convert_
 class DDSMPatchDataModule(pl.LightningDataModule):
     def __init__(self, config):
         super().__init__()
-        self.patch_size = get_parameter(config, ['Datamodule', 'patch_size'])
-        self.convert_to_rgb = get_parameter(config, ["Datamodule", "convert_to_rgb"], default=True)
-        self.normalize_input = get_parameter(config, ["Datamodule", "normalize_input"], default=False)   
-        self.ddsm_root = get_parameter(config, ['Datamodule', 'ddsm_root'])
-        self.batch_size = get_parameter(config, ['Datamodule', 'batch_size'])
-        self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
-        self.eval_patches_root = get_parameter(config, ['Datamodule', 'eval_patches_root'])
-        self.subset_size_train = get_parameter(config, ['Datamodule', 'subset_size_train'], default=None)
-        self.subset_size_test = get_parameter(config, ['Datamodule', 'subset_size_test'], default=None)
-        self.include_normals = get_parameter(config, ['Datamodule', 'include_normals'], default=True)
         self.source_root = get_parameter(config, ['General', 'source_root'], default=None)
-        self.source_root = pathlib.Path(self.source_root) if self.source_root is not None else None
         
-        self.split_csv = get_parameter(config, ['Datamodule', 'split_csv'])
+        self.batch_size = get_parameter(config, ['Datamodule',  'batch_size'])
+        self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
+        
+        self.ddsm_root = get_parameter(config, ['Datamodule', 'train_set','ddsm_root'])
+        self.split_csv = get_parameter(config, ['Datamodule', 'train_set','split_csv'])
+        self.ddsm_annotations = get_parameter(config, ['Datamodule','train_set', 'ddsm_annotations'])
+        self.patch_size = get_parameter(config, ['Datamodule', 'train_set', 'patch_size'])
+        self.convert_to_rgb = get_parameter(config, ["Datamodule", 'train_set', "convert_to_rgb"], default=True)
+        self.normalize_input = get_parameter(config, ["Datamodule",'train_set', "normalize_input"], default=False)   
+        self.subset_size_train = get_parameter(config, ['Datamodule', 'train_set','subset_size_train'], default=None)
+        self.include_normals = get_parameter(config, ['Datamodule','train_set', 'include_normals'], default=True)
+        
+        
+        self.eval_patches_root = get_parameter(config, ['Datamodule', 'val_set', 'eval_patches_root'])
+        self.subset_size_test = get_parameter(config, ['Datamodule', 'val_set', 'subset_size_test'], default=None)
+        
+        self.return_mask = True
+        
+        
+        self.source_root = pathlib.Path(self.source_root) if self.source_root is not None else None
         self.split_csv = self.source_root / self.split_csv if self.source_root is not None else self.split_csv
-        self.ddsm_annotations = get_parameter(config, ['Datamodule', 'ddsm_annotations'])
         self.ddsm_annotations = self.source_root / self.ddsm_annotations if self.source_root is not None else self.ddsm_annotations
         
-        assert str(self.patch_size) in str(self.eval_patches_root), "eval_patches should be of the same size as the training patches"
+        assert str(self.patch_size) in str(self.eval_patches_root), "eval_patches should be of the same size as the training patches: " + str(self.patch_size)
         
         
 
@@ -835,15 +861,15 @@ class DDSMPatchDataModule(pl.LightningDataModule):
                                     batch_size=self.batch_size, 
                                     convert_to_rgb=self.convert_to_rgb,
                                     shuffle=True, num_workers=self.num_workers, 
-                                    return_mask=False, subset_size=self.subset_size_train,
+                                    return_mask=self.return_mask, subset_size=self.subset_size_train,
                                     include_normals=self.include_normals,
                                     normalize_input = self.normalize_input)
     
     def val_dataloader(self):
         return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, 
                                    convert_to_rgb=self.convert_to_rgb,
-                                   return_mask=False, subset_size=self.subset_size_test,
-                                   normalize_input = self.normalize_input)
+                                   return_mask=self.return_mask, subset_size=self.subset_size_test,
+                                   format_img = 'npy')
         
     
     def test_dataloader(self):

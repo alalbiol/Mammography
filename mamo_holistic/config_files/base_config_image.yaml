@@ -27,7 +27,7 @@ LightningModule:
   model_name: nikulin
   model_params:
     #ckpt_path: /home/alalbiol/Programacion/mammography/others/nikulin/data/SC1_nets/Final_Round_RC1/best_model.ckpt-3750
-    ckpt_path: /home/alalbiol/Programacion/mammography/others/nikulin/data/SC1_nets/3rd_Round_RC1/best_model.ckpt-3500
+    ckpt_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/Nikulin/package/SC1_nets/3rd_Round_RC1/best_model.ckpt-3500
   learning_rate: 0.001
   optimizer_type: adam
   num_classes: 5
