@@ -1,5 +1,6 @@
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import Callback
+import torch
 
 class LearningRateWarmUpCallback(Callback):
     def __init__(self, warmup_epochs, initial_lr, max_lr):
@@ -134,3 +135,38 @@ class VisualizeBatchPatchesCallback(Callback):
         
         
         return super().on_validation_epoch_start(trainer, pl_module)
+    
+ 
+class GradientNormLoggerCallback(pl.Callback):
+    def __init__(self, log_freq: int = 10):
+        """
+        Args:
+            log_freq: Frequency (in steps) to log the gradient norm.
+        """
+        self.log_freq = log_freq
+
+    def log_grad_norms(self, trainer, grad_norms: dict):
+        """Logs gradient norms to W&B or other loggers."""
+        # Use trainer.global_step - 1 to avoid step conflicts
+        if trainer.logger and hasattr(trainer.logger.experiment, "log"):
+            trainer.logger.experiment.log(
+                grad_norms, step=trainer.global_step + 1
+            )
+
+ 
+    def on_before_optimizer_step(self, trainer, pl_module, optimizer):
+        """Log the clipped gradient norms before the optimizer step."""
+        if trainer.global_step % self.log_freq == 0:
+            grad_norms = {}
+            total_norm = 0.0
+
+            # Compute and log gradient norms after clipping
+            for name, param in pl_module.named_parameters():
+                if param.grad is not None:
+                    grad_norm = torch.norm(param.grad).item()
+                    total_norm += grad_norm ** 2
+            
+            grad_norms["total_grad_norm"] = total_norm ** 0.5
+
+            # Log using the trainer's logger
+            self.log_grad_norms(trainer, grad_norms)
