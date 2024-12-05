@@ -34,13 +34,19 @@ LightningModule:
   num_classes: 5
   lr_scheduler: ReduceLROnPlateau
   lr_scheduler_options:
-    mode: min
+    mode: max
     factor: 0.5
     patience: 20
     min_lr: 1.e-8
+  loss_name: smoothed_cross_entropy
+  loss_params:
+    smoothing: 0.1
+    num_classes: 5
 
 Trainer:
   max_epochs: 200
+  #gradient_clip_val: 5.0  # Maximum norm of gradients
+  #gradient_clip_algorithm: norm
 
 
 
@@ -54,12 +60,13 @@ Callbacks:
     num_rows: 2
   LearningRateMonitor:
     logging_interval: 'epoch'
+  #GradientNormLogger:
   ModelCheckpoint:
-    monitor: val_loss
-    mode: min
+    monitor: val_auroc
+    mode: max
     save_top_k: 1
     dirpath: /tmp/checkpoints/ddsm_patch_224_nikulin
-    filename: best_model_nikulin_patch
+    filename: best_model_nikulin_patch_{epoch}-{step}-{val_auroc:.2f}
     verbose: True
   
   

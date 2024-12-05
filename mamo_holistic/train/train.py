@@ -114,7 +114,7 @@ class DDSMPatchClassifier(pl.LightningModule):
                 # Set up ReduceLROnPlateau scheduler
                 scheduler = {
                     'scheduler': ReduceLROnPlateau(optimizer, **self.lr_scheduler_options),
-                    'monitor': 'val_loss',  # Monitors validation loss
+                    'monitor': 'val_auroc',  # Monitors validation loss
                     'interval': 'epoch',
                     'frequency': 1
                 }
@@ -237,10 +237,10 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         if isinstance(self.trainer.logger,WandbLogger):                
             experiment = self.logger.experiment
-            experiment.log({"train confusion_matrix": wandb.Image(fig2img(fig))})
+            experiment.log({"train/train confusion_matrix": wandb.Image(fig2img(fig))})
         self.train_confusion_matrix.reset()
         
-        self.log("train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
+        self.log("train/train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
         self.train_accuracy.reset()
         
            # Calculate cancer probability
@@ -266,8 +266,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         fig_pr, ax_pr = plot_pr_curve(precision, recall)
         
         if isinstance(self.trainer.logger, WandbLogger):
-            experiment.log({"train ROC curve": wandb.Image(fig2img(fig_roc))})
-            experiment.log({"train PR curve": wandb.Image(fig2img(fig_pr))})
+            experiment.log({"train/train ROC curve": wandb.Image(fig2img(fig_roc))})
+            experiment.log({"train/train PR curve": wandb.Image(fig2img(fig_pr))})
 
             
     
@@ -303,7 +303,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         fig, ax = self.val_confusion_matrix.plot() 
         if isinstance( self.trainer.logger, WandbLogger):     
             experiment = self.logger.experiment
-            experiment.log({"val confusion_matrix": wandb.Image(fig2img(fig))})
+            experiment.log({"val/val confusion_matrix": wandb.Image(fig2img(fig))})
         self.val_confusion_matrix.reset()
         
         
@@ -344,8 +344,25 @@ class DDSMPatchClassifier(pl.LightningModule):
         # self.log("val_AUROC_4", val_auroc_4)
         # self.val_AUROC_5.reset()
         # self.val_AUROC_4.reset()
-    
-    
+                    
+    # def configure_gradient_clipping(self, optimizer, gradient_clip_val, gradient_clip_algorithm):
+    #     super().configure_gradient_clipping(optimizer, gradient_clip_val, gradient_clip_algorithm)
+        
+    #     trainer = self.trainer
+    #     pl_module = self
+    #     if trainer.global_step % trainer.log_every_n_steps == 0:
+    #         total_norm = 0.0
+    #         for name, param in pl_module.named_parameters():
+    #             if param.grad is not None:
+    #                 grad_norm = torch.norm(param.grad).item()
+    #                 total_norm += grad_norm ** 2  # Accumulate squared norms
+            
+            
+    #         if trainer.logger and hasattr(trainer.logger.experiment, "log"):
+    #             trainer.logger.experiment.log(
+    #                 {"total_grad_norm_after_clipping": total_norm ** 0.5}, step=trainer.global_step+1)
+                
+              
 
 def get_logger(config):
     # Check if the logger is set to WandB
@@ -383,6 +400,10 @@ def create_callbacks(config):
         elif callback_name == "VisualizeBatchPathes":
             from utils.callbacks import VisualizeBatchPatchesCallback
             callbacks.append(VisualizeBatchPatchesCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "GradientNormLogger":
+            from utils.callbacks import GradientNormLoggerCallback
+            params = callbacks_dict[callback_name] if callbacks_dict[callback_name] is not None else {}
+            callbacks.append(GradientNormLoggerCallback(**params))
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
     return callbacks
@@ -426,6 +447,9 @@ if __name__ == "__main__":
     
     # Trainer
     trainer_kwargs = get_parameter(config, ["Trainer"], mode="default", default={})
+    
+    print("Trainer kwargs: ", trainer_kwargs)
+    
     trainer = pl.Trainer(
         logger=logger,
         callbacks= callbacks,

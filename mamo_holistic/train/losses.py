@@ -28,7 +28,41 @@ def get_loss(loss_name, **kwargs):
         print("kwargs: ", kwargs)
         return nn.CrossEntropyLoss(**kwargs)
     
+    if loss_name == "smoothed_cross_entropy":
+        print("Using Smoothed CrossEntropy loss")
+        print("kwargs: ", kwargs)
+        return SmoothedCrossEntropyLoss(**kwargs)
+    
     raise ValueError(f"Loss {loss_name} not found.")
+
+
+class SmoothedCrossEntropyLoss(nn.Module):
+    def __init__(self, smoothing=0.1, num_classes = 5, reduction='mean'):
+        """
+        Smoothed cross-entropy loss.
+        
+        Args:
+            smoothing (float): Smoothing factor.
+            reduction (str): Specifies the reduction to apply to the output: 
+                             'none' | 'mean' | 'sum'. Default is 'mean'.
+        """
+        super(SmoothedCrossEntropyLoss, self).__init__()
+        self.smoothing = smoothing
+        self.reduction = reduction
+        self.num_classes = num_classes
+        
+    def forward(self, logits, targets):
+        device = logits.device
+        confidence = 1.0 - self.smoothing
+        smoothed_labels = torch.full(size=(targets.size(0), self.num_classes), fill_value=self.smoothing / (self.num_classes - 1), device=device)
+        smoothed_labels.scatter_(1, targets.unsqueeze(1), confidence)
+        
+        if self.reduction == 'mean':
+            return torch.mean(-torch.sum(smoothed_labels * F.log_softmax(logits, dim=1), dim=1))
+        elif self.reduction == 'sum':
+            return torch.sum(-torch.sum(smoothed_labels * F.log_softmax(logits, dim=1), dim=1))
+        
+        return -torch.sum(smoothed_labels * F.log_softmax(logits, dim=1), dim=1) # 'none' reduction
 
 
 class FocalLoss(nn.Module):
