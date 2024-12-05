@@ -149,7 +149,7 @@ class DDSMImageClassifier(pl.LightningModule):
         # Store outputs and targets for AUROC and PRROC calculation
         
 
-        self.train_outputs = torch.cat((self.train_outputs, probs[:,1].detach().cpu()), dim=0)
+        self.train_outputs = torch.cat((self.train_outputs, probs.detach().cpu()), dim=0)
         self.train_targets = torch.cat((self.train_targets, y.detach().cpu()), dim=0)
     
         return loss
@@ -185,7 +185,7 @@ class DDSMImageClassifier(pl.LightningModule):
         #print("probs", probs[:,1].shape)
         #print("self.val_outputs", self.val_outputs.shape)
         
-        self.val_outputs = torch.cat((self.val_outputs, probs[:,1].detach().cpu()), dim=0)
+        self.val_outputs = torch.cat((self.val_outputs, probs.detach().cpu()), dim=0)
         self.val_targets = torch.cat((self.val_targets, y.detach().cpu()), dim=0) 
 
         return loss
@@ -245,7 +245,7 @@ class DDSMImageClassifier(pl.LightningModule):
         
         # Calculate cancer probability
 
-        cancer_prob = self.val_outputs
+        cancer_prob = self.val_outputs[:,1]
         cancer_label = self.val_targets
     
         # for the first epoch, skip if all labels are the same
