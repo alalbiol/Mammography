@@ -397,7 +397,7 @@ def create_callbacks(config):
         elif callback_name == "LearningRateWarmUp":
             from utils.callbacks import LearningRateWarmUpCallback
             callbacks.append(LearningRateWarmUpCallback(**callbacks_dict[callback_name]))
-        elif callback_name == "VisualizeBatchPathes":
+        elif callback_name == "VisualizeBatchPatches":
             from utils.callbacks import VisualizeBatchPatchesCallback
             callbacks.append(VisualizeBatchPatchesCallback(**callbacks_dict[callback_name]))
         elif callback_name == "GradientNormLogger":

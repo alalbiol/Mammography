@@ -104,7 +104,7 @@ class DDSMImageClassifier(pl.LightningModule):
                 # Set up ReduceLROnPlateau scheduler
                 scheduler = {
                     'scheduler': ReduceLROnPlateau(optimizer, **self.lr_scheduler_options),
-                    'monitor': 'val_loss',  # Monitors validation loss
+                    'monitor': 'val_auroc',  # Monitors validation auroc
                     'interval': 'epoch',
                     'frequency': 1
                 }
@@ -308,6 +308,14 @@ def create_callbacks(config):
         elif callback_name == "LearningRateWarmUp":
             from utils.callbacks import LearningRateWarmUpCallback
             callbacks.append(LearningRateWarmUpCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "VisualizeBatch":
+            from utils.callbacks import VisualizeBatchImagesCallback
+            callbacks.append(VisualizeBatchImagesCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "GradientNormLogger":
+            from utils.callbacks import GradientNormLoggerCallback
+            params = callbacks_dict[callback_name] if callbacks_dict[callback_name] is not None else {}
+            callbacks.append(GradientNormLoggerCallback(**params))
+
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
     return callbacks

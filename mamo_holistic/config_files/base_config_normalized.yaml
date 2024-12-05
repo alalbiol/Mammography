@@ -56,7 +56,7 @@ Callbacks:
   #   mode: min
   #   patience: 60
   #   verbose: True
-  VisualizeBatchPathes:
+  VisualizeBatchPatches:
     num_rows: 2
   LearningRateMonitor:
     logging_interval: 'epoch'

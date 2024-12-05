@@ -27,7 +27,7 @@ from utils.utils import fig2img
 import wandb
 
 
-def show_batch(batch, num_rows=2):
+def show_batch_patch(batch, num_rows=2):
     labels = batch[1].numpy()
     background_idx = np.where(labels == 0)[0]
     benign_mass_idx = np.where(labels == 1)[0]
@@ -98,8 +98,40 @@ def show_batch(batch, num_rows=2):
     return fig2img(fig)
             
         
+def show_batch_ddsm(batch, num_rows=2):
+    labels = batch[1].numpy()
+    normal_idx = np.where(labels == 0)[0]
+    cancer_idx = np.where(labels == 1)[0]
 
+    fig, axs = plt.subplots(num_rows, 2, figsize=(10, 15))
 
+    for row in range(num_rows):
+        if row < len(normal_idx):
+            k = normal_idx[row]
+            image = batch[0][k].numpy()[0]
+            mask = batch[2][k].numpy()
+        else:
+            image = np.zeros((224, 224))
+            mask = np.zeros((224, 224))
+            mask[60:120,60:120]=1
+            
+        show_mask_image(image, mask, ax=axs[row, 0], title='normal')
+        
+        if row < len(cancer_idx):
+            k = cancer_idx[row]
+            image = batch[0][k].numpy()[0]
+            mask = batch[2][k].numpy()
+        else:
+            image = np.zeros((224, 224))
+            mask = np.zeros((224, 224))
+            mask[60:120,60:120]=1
+        
+        show_mask_image(image, mask, ax=axs[row, 1], title='cancer')
+        
+        fig.suptitle("mean = {:.2f}, std = {:.2f}".format(batch[0].mean(), batch[0].std()))
+    
+    return fig2img(fig)
+                 
 
 class VisualizeBatchPatchesCallback(Callback):
     def __init__(self, num_rows = 2):
@@ -114,7 +146,7 @@ class VisualizeBatchPatchesCallback(Callback):
         #images, labels, masks = batch
         
         # Show the batch
-        img = show_batch(batch, num_rows=self.num_rows)
+        img = show_batch_patch(batch, num_rows=self.num_rows)
         experiment = trainer.logger.experiment
         experiment.log({"training batch": wandb.Image(img)})
         
@@ -128,7 +160,7 @@ class VisualizeBatchPatchesCallback(Callback):
         batch = next(iter(val_dataloader))
         #images, labels, masks = batch
         
-        img = show_batch(batch, num_rows=self.num_rows)
+        img = show_batch_patch(batch, num_rows=self.num_rows)
         experiment = trainer.logger.experiment
         experiment.log({"validation batch": wandb.Image(img)})
         
@@ -136,6 +168,41 @@ class VisualizeBatchPatchesCallback(Callback):
         
         return super().on_validation_epoch_start(trainer, pl_module)
     
+class VisualizeBatchImagesCallback(Callback):
+    def __init__(self, num_rows = 2):
+        super().__init__()
+        self.num_rows = num_rows
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        # Get the first batch from the training dataloader
+        train_dataloader = trainer.train_dataloader
+        
+        batch = next(iter(train_dataloader))
+        #images, labels, masks = batch
+        
+        # Show the batch
+        img = show_batch_ddsm(batch, num_rows=self.num_rows)
+        experiment = trainer.logger.experiment
+        experiment.log({"training batch": wandb.Image(img)})
+        
+        
+        return super().on_train_epoch_start(trainer, pl_module)
+        
+        
+    def on_validation_epoch_start(self, trainer, pl_module):
+        # Get the first batch from the validation dataloader
+        val_dataloader = trainer.val_dataloaders
+        batch = next(iter(val_dataloader))
+        #images, labels, masks = batch
+        
+        img = show_batch_ddsm(batch, num_rows=self.num_rows)
+        experiment = trainer.logger.experiment
+        experiment.log({"validation batch": wandb.Image(img)})
+        
+        
+        
+        return super().on_validation_epoch_start(trainer, pl_module)
+
  
 class GradientNormLoggerCallback(pl.Callback):
     def __init__(self, log_freq: int = 10):

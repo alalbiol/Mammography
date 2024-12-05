@@ -3,14 +3,15 @@ General:
   gpu_type: "RTX 3090" 
 
 Datamodule:
+  ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_1152x896
+  train_csv: resources/ddsm/ddsm_nikulin_partitions/train_filenames.txt
+  val_csv: resources/ddsm/ddsm_nikulin_partitions/valid_filenames.txt
+  ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1152_896.json.gz
   convert_to_rgb: False
-  train_csv: resources/ddsm/DDSM_train.csv
-  val_csv: resources/ddsm/DDSM_test.csv
-  ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
+  return_mask: True
   #ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_1152x896
-  ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_1152x896
-  batch_size: 8
-  num_workers: 8
+  batch_size: 16
+  num_workers: 16
   pin_memory: True
   dream_pilot_folder: /home/alalbiol/Data/mamo/dream_pilot_png_832x1152
   #subset_size_train: 1000
@@ -19,21 +20,25 @@ Datamodule:
 
 Logger:
   type: wandb
-  project: ddsm_patch
+  project: ddsm_image
   name: nikulin_image
   save_dir: /tmp/logs/ddsm_patch_224
 
 LightningModule:
   model_name: nikulin
-  model_params:
+  #model_params:
     #ckpt_path: /home/alalbiol/Programacion/mammography/others/nikulin/data/SC1_nets/Final_Round_RC1/best_model.ckpt-3750
-    ckpt_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/Nikulin/package/SC1_nets/3rd_Round_RC1/best_model.ckpt-3500
+    #ckpt_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/Nikulin/package/SC1_nets/3rd_Round_RC1/best_model.ckpt-3500
   learning_rate: 0.001
   optimizer_type: adam
-  num_classes: 5
+  num_classes: 2
+  loss_name: smoothed_cross_entropy
+  loss_params:
+    smoothing: 0.1
+    num_classes: 2
   lr_scheduler: ReduceLROnPlateau
   lr_scheduler_options:
-    mode: min
+    mode: max
     factor: 0.5
     patience: 20
     min_lr: 1.e-8
@@ -49,14 +54,16 @@ Callbacks:
   #   mode: min
   #   patience: 60
   #   verbose: True
+  VisualizeBatch:
+    num_rows: 2
   LearningRateMonitor:
     logging_interval: 'epoch'
-  # ModelCheckpoint:
-  #   monitor: val_loss
-  #   mode: min
-  #   save_top_k: 1
-  #   dirpath: /tmp/logs/ddsm_patch_224
-  #   filename: best_model
-  #   verbose: True
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 1
+    dirpath: /tmp/logs/nikulin_image
+    filename: best_model_nikulin_image-{step}-{val_auroc:.2f}
+    verbose: True
   
   
