@@ -106,8 +106,6 @@ class NikulinPatchModel(nn.Module):
         return x
 
 
-
-
 class NikulinImage(nn.Module):
     def __init__(self):
         super(NikulinImage, self).__init__()
@@ -452,7 +450,7 @@ class NikulinImage(nn.Module):
 
 if __name__ == "__main__":
     # Instantiate the model
-    model = MammoModel()  # Make sure to replace YourOptionsClass with the actual class you're using for options
+    model = NikulinImage()  # Make sure to replace YourOptionsClass with the actual class you're using for options
 
     # Print the model architecture
     #for param in model.named_parameters():
