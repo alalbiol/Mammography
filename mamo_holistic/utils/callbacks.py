@@ -115,7 +115,7 @@ def show_batch_ddsm(batch, num_rows=2):
             mask = np.zeros((224, 224))
             mask[60:120,60:120]=1
             
-        show_mask_image(image, mask, ax=axs[row, 0], title='normal')
+        show_mask_image(image, mask, ax=axs[row, 0], title='normal', multi_label=True)
         
         if row < len(cancer_idx):
             k = cancer_idx[row]
@@ -126,7 +126,7 @@ def show_batch_ddsm(batch, num_rows=2):
             mask = np.zeros((224, 224))
             mask[60:120,60:120]=1
         
-        show_mask_image(image, mask, ax=axs[row, 1], title='cancer')
+        show_mask_image(image, mask, ax=axs[row, 1], title='cancer', multi_label=True)
         
         fig.suptitle("mean = {:.2f}, std = {:.2f}".format(batch[0].mean(), batch[0].std()))
     
