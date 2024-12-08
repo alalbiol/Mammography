@@ -48,7 +48,8 @@ LightningModule:
 Trainer:
   max_epochs: 600
   log_every_n_steps: 3
-  check_val_every_n_epoch: 10
+  #check_val_every_n_epoch: 10
+  #limit_train_batches: 10
 
 
 

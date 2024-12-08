@@ -249,7 +249,7 @@ class FreezePatchLayersCallback(Callback):
         current_epoch = trainer.current_epoch
         if current_epoch < self.freeze_epochs:
             pl_module.model.freeze_patch_layers()
-            print(f"Epoch {current_epoch + 1}: Patch layers frozen")
+            print(f"Epoch {current_epoch}: Patch layers frozen")
         else:
             pl_module.model.unfreeze_patch_layers()
-            print(f"Epoch {current_epoch + 1}: Patch layers unfrozen")
+            print(f"Epoch {current_epoch}: Patch layers unfrozen")

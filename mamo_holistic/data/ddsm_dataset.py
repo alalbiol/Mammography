@@ -37,7 +37,6 @@ class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
         
 
     def __iter__(self):
-        print("New barch sampler")
         num_pos_per_batch = self.batch_size // 2
         num_neg_per_batch = self.batch_size - num_pos_per_batch
         
@@ -64,9 +63,7 @@ class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
     def __len__(self):
         return self.num_batches * self.batch_size  # Total number of samples
 
-    def __len__(self):
-        return self.num_batches*self.batch_size
-
+ 
 
 class RandomAffineTransform:
     def __init__(self, angle_range=(-180, 180), shear_range=(-0.1, 0.1), 
