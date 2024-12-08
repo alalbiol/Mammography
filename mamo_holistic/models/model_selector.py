@@ -68,7 +68,7 @@ def get_image_model(model_name, num_classes = 2,  **kwargs):
     if model_name == "nikulin":
         print("Using nikulin model")
         from .nikulin import NikulinImage
-        model =  NikulinImage()
+        model =  NikulinImage(**kwargs)
         if "ckpt_path" in kwargs:
             print("Loading weights from", kwargs["ckpt_path"])
             model.load_weights_from_tf(kwargs["ckpt_path"])

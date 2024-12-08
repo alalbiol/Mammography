@@ -107,7 +107,7 @@ class NikulinPatchModel(nn.Module):
 
 
 class NikulinImage(nn.Module):
-    def __init__(self):
+    def __init__(self,patch_model_weights_path=None):
         super(NikulinImage, self).__init__()
 
         self.bn1 = nn.BatchNorm2d(1)
@@ -166,6 +166,11 @@ class NikulinImage(nn.Module):
         
         self.bn_shortcut_final = nn.BatchNorm2d(5)
         self.shortcut_final = nn.Conv2d(5, 2, kernel_size=(3,2), stride=1, padding=0, bias=False)
+        
+        if patch_model_weights_path is not None:
+            print("Loading weights from patch model: ", patch_model_weights_path)
+            self.load_weights_from_patch_model(patch_model_weights_path)
+        self.patch_model_keys = [] #filled in load_weights_from_patch_model
         
     def load_weights_from_tf(self, checkpoint_path, exp_moving_avg=True, verbose=False):
         checkpoint = tf.train.load_checkpoint(checkpoint_path)
@@ -383,6 +388,32 @@ class NikulinImage(nn.Module):
             # print("=" * 50)        
 
 
+    
+    def load_weights_from_patch_model(self, pth_file):
+        # loads weights from a patch model trained with pytorch lightning
+        pl_checkpoint = torch.load(pth_file)
+        state_dict = pl_checkpoint['state_dict']
+        new_state_dict = {k.replace('model.', ''): v for k, v in state_dict.items() if k.startswith('model.')}
+
+        self.load_state_dict(state_dict, strict=False)
+        
+        self.patch_model_keys = new_state_dict.keys() # useful to freeze these layers
+
+    def freeze_patch_layers(self):
+        for name, param in self.named_parameters():
+            if name in self.patch_model_keys:
+                param.requires_grad = False
+                
+    def unfreeze_patch_layers(self):
+        for name, param in self.named_parameters():
+            if name in self.patch_model_keys:
+                param.requires_grad = True        
+    
+    
+        
+        
+        
+        
 
     def forward(self, x):
         x = self.bn1(x)

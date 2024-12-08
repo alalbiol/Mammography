@@ -315,6 +315,9 @@ def create_callbacks(config):
             from utils.callbacks import GradientNormLoggerCallback
             params = callbacks_dict[callback_name] if callbacks_dict[callback_name] is not None else {}
             callbacks.append(GradientNormLoggerCallback(**params))
+        elif callback_name == "FreezePatchLayersCallback":
+            from utils.callbacks import FreezePatchLayersCallback
+            callbacks.append(FreezePatchLayersCallback(**callbacks_dict[callback_name]))
 
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")

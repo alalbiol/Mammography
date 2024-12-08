@@ -18,6 +18,56 @@ import albumentations as A
 
 from utils.sample_patches_main import sample_positive_bb, sample_negative_bb,  sample_hard_negative_bb, sample_blob_negative_bb
 
+
+class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
+    """
+    BalancedBatchSampler ensures each batch contains an equal number of positive and negative samples.
+
+    Args:
+        dataset: A PyTorch Dataset object. Must have a `get_all_targets()` method returning labels.
+        batch_size: Integer, the size of each batch. Must be even for balance.
+    """
+    def __init__(self, dataset, batch_size):
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.labels = dataset.get_all_targets()
+        self.pos_indices = np.where(self.labels == True)[0]
+        self.neg_indices = np.where(self.labels == False)[0]
+        self.num_batches = int(np.ceil(min(len(self.pos_indices), len(self.neg_indices)) / (batch_size // 2)))
+        
+
+    def __iter__(self):
+        print("New barch sampler")
+        num_pos_per_batch = self.batch_size // 2
+        num_neg_per_batch = self.batch_size - num_pos_per_batch
+        
+        
+        pos_indices = np.random.permutation(self.pos_indices)
+        neg_indices = np.random.permutation(self.neg_indices)
+        
+        pos_indices = np.resize(pos_indices, num_pos_per_batch * self.num_batches) # Now multiple of batch size/2 and num_batches
+        neg_indices = np.resize(neg_indices, num_neg_per_batch * self.num_batches)        
+        
+        
+
+        
+        pos_batches = np.array_split(pos_indices, self.num_batches)
+        neg_batches = np.array_split(neg_indices, self.num_batches)
+
+        for pos_batch, neg_batch in zip(pos_batches, neg_batches):
+            batch_indices = np.concatenate([pos_batch, neg_batch])
+            np.random.shuffle(batch_indices)
+            batch_indices = iter(batch_indices.tolist())
+            for _ in range(self.batch_size):
+                yield next(batch_indices)
+            
+    def __len__(self):
+        return self.num_batches * self.batch_size  # Total number of samples
+
+    def __len__(self):
+        return self.num_batches*self.batch_size
+
+
 class RandomAffineTransform:
     def __init__(self, angle_range=(-180, 180), shear_range=(-0.1, 0.1), 
                  scale_range=(0.8, 1.2)):
@@ -1101,6 +1151,7 @@ class DDSMImageDataModule(pl.LightningDataModule):
         self.subset_size_train = get_parameter(config, ['Datamodule', 'subset_size_train'], default=None)
         self.subset_size_test = get_parameter(config, ['Datamodule', 'subset_size_test'], default=None)
         self.batch_size = get_parameter(config, ['Datamodule', 'batch_size'])
+        self.balanced_patches = get_parameter(config, ['Datamodule', 'balanced_patches'], default=False)
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
         
         self.train_csv = self.source_root / self.train_csv if self.source_root is not None else self.train_csv
@@ -1165,7 +1216,14 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                     intensity_transform=intensity_transform,
                                     return_mask=self.return_mask)  
         
-        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+        if self.balanced_patches:
+            print("Using balanced batch sampler")
+            sampler = BalancedBatchSampler(dataset, batch_size=self.batch_size)
+        else:
+            sampler = None
+           
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, 
+                                sampler=sampler, num_workers=self.num_workers)
         return dataloader
     
     def val_dataloader(self):
