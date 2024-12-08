@@ -1102,8 +1102,8 @@ class DDSM_Image_Dataset(Dataset):
             image = self.intensity_transform(image)
                 
         if mask is not None:
-            return image, label, mask
-        return image, label
+            return image, label, mask, pathlib.Path(image_id).stem
+        return image, label, pathlib.Path(image_id).stem
     
 
 
@@ -1240,7 +1240,8 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                     intensity_transform=intensity_transform,
                                     return_mask=self.return_mask)  
         
-        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
+        test_batch_size = self.batch_size // 4 # so we can TTA easily
+        dataloader = DataLoader(dataset, batch_size=test_batch_size, shuffle=False, num_workers=self.num_workers)
         return dataloader
     
     def test_dataloader(self):

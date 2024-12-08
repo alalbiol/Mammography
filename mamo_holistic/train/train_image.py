@@ -1,19 +1,14 @@
 # Import necessary libraries
 import torch
-from torch import nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, random_split
-from torchvision import transforms, datasets, models
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torchmetrics
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import argparse
-import yaml
 import wandb
-import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd
 
 import sys
 
@@ -157,13 +152,26 @@ class DDSMImageClassifier(pl.LightningModule):
     def on_validation_epoch_start(self):
         self.val_outputs = torch.empty(0,  device='cpu')
         self.val_targets = torch.empty(0, dtype=torch.long, device='cpu')
-        
+        self.val_image_ids = []
+                
     def on_test_epoch_start(self):
         self.on_validation_epoch_start()
     
     def validation_step(self, batch, batch_idx):
         x = batch[0]
         y = batch[1]
+        mask = batch[2]
+        image_id = batch[3]
+        
+        x_rl = torch.flip(x, [3])
+        x_ud = torch.flip(x, [2])
+        x_ud_rl = torch.flip(x_ud, [3])
+        
+        x = torch.cat((x, x_rl, x_ud, x_ud_rl), dim=0)
+        y = torch.cat((y, y, y, y), dim=0)
+        image_id = image_id * 4
+        
+        
         
         logits = self(x)
         loss = self.loss_fn(logits, y)
@@ -187,6 +195,7 @@ class DDSMImageClassifier(pl.LightningModule):
         
         self.val_outputs = torch.cat((self.val_outputs, probs.detach().cpu()), dim=0)
         self.val_targets = torch.cat((self.val_targets, y.detach().cpu()), dim=0) 
+        self.val_image_ids = self.val_image_ids + list(image_id)
 
         return loss
     
@@ -247,22 +256,38 @@ class DDSMImageClassifier(pl.LightningModule):
 
         cancer_prob = self.val_outputs[:,1]
         cancer_label = self.val_targets
-    
+        image_ids = self.val_image_ids
+        
+        val_df = pd.DataFrame({'image_id': image_ids, 
+                               'cancer_prob': cancer_prob, 
+                               'cancer_label': cancer_label})
+        val_df['breast_id'] = val_df['image_id'].apply(lambda x: x.rsplit('_',1)[0])
+            
         # for the first epoch, skip if all labels are the same
         if cancer_label.sum() == 0 or cancer_label.sum() == len(cancer_label): # Skip if all labels are the same
             return
         
+        cancer_prob_image = val_df.groupby('image_id')['cancer_prob'].mean().values
+        cancer_label_image = val_df.groupby('image_id')['cancer_label'].first().values
+        
+        cancer_prob_breast = val_df.groupby('breast_id')['cancer_prob'].mean().values
+        cancer_label_breast = val_df.groupby('breast_id')['cancer_label'].first().values
+        
         # Compute AUROC and PRROC
-        auroc = roc_auc_score(cancer_label, cancer_prob)
-        precision, recall, _ = precision_recall_curve(cancer_label, cancer_prob)
-        prroc = average_precision_score(cancer_label, cancer_prob)
+        auroc_image = roc_auc_score(cancer_label_image, cancer_prob_image)
+        auroc_breast = roc_auc_score(cancer_label_breast, cancer_prob_breast)
+        
+        precision, recall, _ = precision_recall_curve(cancer_label_breast, cancer_prob_breast)
+        prroc_breast = average_precision_score(cancer_label_breast, cancer_prob_breast)
         
         # Log AUROC and PRROC
-        self.log("val_auroc", auroc, prog_bar=True)
-        self.log("val_prroc", prroc, prog_bar=True)
+        self.log("val_auroc", auroc_image, prog_bar=True)
+        self.log("val_auroc_breast", auroc_breast, prog_bar=True)
+
+        self.log("val_prroc", prroc_breast, prog_bar=True)
         
         # Plot and log ROC and PR curves
-        fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)
+        fpr, tpr, _ = roc_curve(cancer_label_image, cancer_prob_image)
         fig_roc, ax_roc = plot_roc_curve(fpr, tpr)
         fig_pr, ax_pr = plot_pr_curve(precision, recall)
         
