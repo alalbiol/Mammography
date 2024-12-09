@@ -19,6 +19,52 @@ import albumentations as A
 from utils.sample_patches_main import sample_positive_bb, sample_negative_bb,  sample_hard_negative_bb, sample_blob_negative_bb
 
 
+
+
+class BalancedPatchBatchSampler(torch.utils.data.sampler.Sampler):
+    """
+    BalancedPatchBatchSampler ensures each batch contains an equal number of classes
+
+    Args:
+        dataset: A PyTorch Dataset object. Must have a `get_all_targets()` method returning labels.
+        batch_size: Integer, the size of each batch. Must be even for balance.
+    """
+    def __init__(self, dataset, batch_size):
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.labels = dataset.get_all_targets()
+        
+        
+        sample_classes = np.unique(self.labels)
+        self.num_classes = len(sample_classes)
+        
+        assert batch_size % self.num_classes == 0, "Batch size must be multiple of number of classes"
+
+        self.class_idx = [np.where(self.labels == i)[0] for i in sample_classes]   
+        
+        self.dataset_size = len(self.labels) // self.num_classes * self.num_classes # make it multiple of num_classes
+        
+
+    def __iter__(self):
+        
+        padded_class_idx = []
+        num_samples_per_class = self.dataset_size // self.num_classes
+        for c in range(self.num_classes):
+            shuffle_indices = np.random.permutation(self.class_idx[c])
+            padded_class_idx.append(np.resize(shuffle_indices, num_samples_per_class))
+        
+        interleaved_idx = np.array(padded_class_idx).T
+        interleaved_idx = interleaved_idx.reshape(-1)
+        
+        return iter(interleaved_idx)   
+                    
+      
+                    
+    def __len__(self):
+        return self.dataset_size  # Total number of samples
+
+
+
 class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
     """
     BalancedBatchSampler ensures each batch contains an equal number of positive and negative samples.
@@ -514,6 +560,7 @@ class DDSM_Patch_Dataset(Dataset):
         
 
     def load_annotations(self, split_csv,  annotations_file):
+        print("loading annotations")
         
         split_images = pd.read_csv(split_csv)
         
@@ -531,6 +578,9 @@ class DDSM_Patch_Dataset(Dataset):
         # filter all annotations that are in the train_images
         annotations = annotations[annotations['image_id'].isin(split_images['ddsm_image'])]
         print("Number of annotations after filtering split: ", len(annotations))
+        
+        self.number_of_abnormal_annotations = len(annotations)
+        print("Number of abnormal annotations: ", self.number_of_abnormal_annotations)
         
         if self.include_normals:
             # annotations only contains abnormal images, lets add normal images for training
@@ -598,13 +648,32 @@ class DDSM_Patch_Dataset(Dataset):
         return annotations
 
     def __len__(self):
-        return len(self.ddsm_annotations)
+        # las que estan por encima de len.ddsm_annotations son patches normales 
+        # en esas imagenes
+        return len(self.ddsm_annotations) + self.number_of_abnormal_annotations
+    
+    
+    def get_all_targets(self):
+        """ Returns all the targets of the dataset, useful for sampling 
+
+        Returns:
+            np.array: with the targets of the dataset (per image)
+        """
+        labels =  self.ddsm_annotations['label'].values
+        additional_labels = np.array(['NORMAL' for _ in range(self.number_of_abnormal_annotations)])
+        return np.concatenate([labels, additional_labels])
+        
 
     def __getitem__(self, idx):
         
-        abnormality = self.ddsm_annotations.iloc[idx]['label']
+        if idx >= len(self.ddsm_annotations):
+            idx_image = idx % len(self.ddsm_annotations)
+            abnormality = 'NORMAL'
+        else:
+            idx_image = idx
+            abnormality = self.ddsm_annotations.iloc[idx]['label']
         
-        image_id = self.ddsm_annotations.iloc[idx]['image_id']
+        image_id = self.ddsm_annotations.iloc[idx_image]['image_id']
         image_path = self.root_dir / image_id
         image = np.array(Image.open(image_path))
         
@@ -618,9 +687,11 @@ class DDSM_Patch_Dataset(Dataset):
                 image_std = 1.0
             
             image = (image - image.mean()) / image_std
+            
+              
         
         if self.return_mask:
-            mask_id = self.ddsm_annotations.iloc[idx]['mask_id']
+            mask_id = self.ddsm_annotations.iloc[idx_image]['mask_id']
             if mask_id is None:
                 mask = np.zeros_like(image, dtype=np.uint8)
             else:
@@ -635,41 +706,45 @@ class DDSM_Patch_Dataset(Dataset):
             
             return image, abnormality, mask
         
-        if self.ddsm_annotations.iloc[idx]['outline'] is not None:
-            points = np.array(self.ddsm_annotations.iloc[idx]['outline']).T 
+        if self.ddsm_annotations.iloc[idx_image]['outline'] is not None:
+            points = np.array(self.ddsm_annotations.iloc[idx_image]['outline']).T 
         else:
             points = None # normal image with no outline
     
         
-        image_patches, labels, mask_patches = self.patch_sampler.sample_patches(image, abnormality, mask= mask, points=points)
+        # image_patches, labels, mask_patches = self.patch_sampler.sample_patches(image, 
+        #                                                                         abnormality, 
+        #                                                                         mask= mask, 
+        #                                                                         points=points)
         
-        labels_idx = [self.class_to_idx[label] for label in labels]
+        if abnormality != 'NORMAL':
+            image, mask = self.patch_sampler.sample_abnormal_patch(image, mask, points)
+        elif idx > idx_image:
+            image, mask = self.patch_sampler.sample_hard_negative_patch(image, mask, points)
+        else:
+            image, mask = self.patch_sampler.sample_blob_patch(image, mask, points)
+           
+            
+        label_idx = self.class_to_idx[abnormality] 
         
-        image_patches = np.array(image_patches)
         
         # random contrast
-        num_patches = image_patches.shape[0]
-        contrast_factors = np.random.uniform(0.8, 1.2, num_patches).reshape(-1, 1, 1)
-        image_patches = image_patches * contrast_factors
+        contrast_factor = np.random.uniform(0.8, 1.2, 1)
+        image = image * contrast_factor
             
         # random shift intensity
-        intensity_shifts = np.random.uniform(-0.1, 0.1, num_patches).reshape(-1, 1, 1)
-        image_patches = image_patches + intensity_shifts 
+        intensity_shift = np.random.uniform(-0.1, 0.1, 1)
+        image = image + intensity_shift 
         
-        image_patches = np.expand_dims(image_patches, axis=1)
+        image = np.expand_dims(image, axis=0)
         if self.convert_to_rgb:
-            image_patches = np.repeat(image_patches, 3, axis=1)
+            image = np.repeat(image, 3, axis=0)
         
-
-        if mask is not None:
-            mask_patches = np.array(mask_patches)
-        else:
-            mask_patches = None
-        labels_idx = np.array(labels_idx)
-        
+        image = image.astype(np.float32) 
+  
         if self.return_mask:
-            return image_patches, labels_idx, mask_patches
-        return image_patches, labels_idx
+            return image, label_idx, mask
+        return image, label_idx
         
         
 
@@ -843,9 +918,9 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batc
                                 include_normals=include_normals,
                                 normalize_input = normalize_input)
 
-    
+    dataloader_sampler = BalancedPatchBatchSampler(dataset, batch_size)
 
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn)
+    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, sampler=dataloader_sampler)
     return dataloader
 
 def get_test_dataloader(patches_root, batch_size=32, return_mask=False, convert_to_rgb = True, subset_size=None, format_img = 'png'):
