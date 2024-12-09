@@ -10,7 +10,7 @@ Datamodule:
   convert_to_rgb: False
   return_mask: True
   #ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_1152x896
-  batch_size: 16
+  batch_size: 24
   balanced_patches: True
   num_workers: 32
   pin_memory: True
@@ -22,7 +22,7 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_image
-  name: nikulin_image_lr_1e-4
+  name: nikulin_image_lr_1e-4_ema
   save_dir: /tmp/logs/ddsm_patch_224
 
 LightningModule:
@@ -38,16 +38,19 @@ LightningModule:
   loss_params:
     smoothing: 0.1
     num_classes: 2
-  lr_scheduler: ReduceLROnPlateau
-  lr_scheduler_options:
-    mode: max
-    factor: 0.5
-    patience: 20
-    min_lr: 1.e-8
+  #lr_scheduler: ReduceLROnPlateau
+  #lr_scheduler_options:
+  #  mode: max
+  #  factor: 0.5
+  #  patience: 20
+  #  min_lr: 1.e-8
+  test_time_augmentation: True
+
 
 Trainer:
   max_epochs: 600
   log_every_n_steps: 3
+  precision: 16-mixed
   #check_val_every_n_epoch: 10
   #limit_train_batches: 10
 
@@ -72,5 +75,7 @@ Callbacks:
     dirpath: /tmp/logs/nikulin_image
     filename: best_model_nikulin_image-{step}-{val_auroc:.2f}
     verbose: True
+  EMACallback:
+    decay: 0.9
   
   
