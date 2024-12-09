@@ -253,3 +253,85 @@ class FreezePatchLayersCallback(Callback):
         else:
             pl_module.model.unfreeze_patch_layers()
             print(f"Epoch {current_epoch}: Patch layers unfrozen")
+            
+class EMACallback(Callback):
+    def __init__(self, decay=0.999):
+        """
+        Initializes the EMA callback.
+        Args:
+            decay (float): Decay rate for the moving average. Values closer to 1 retain weights longer.
+        """
+        super().__init__()
+        self.decay = decay
+        self.ema_weights = {}
+
+    def setup(self, trainer, pl_module, stage=None):
+        """
+        Initializes EMA weights during setup. These remain on CPU initially.
+        """
+        self.ema_weights = {
+            name: param.clone().detach()
+            for name, param in pl_module.named_parameters() if param.requires_grad
+        }
+
+    def on_train_start(self, trainer, pl_module):
+        """
+        Moves EMA weights to the same device as the model at the start of training.
+        """
+        device = next(pl_module.parameters()).device
+        for name, ema_param in self.ema_weights.items():
+            self.ema_weights[name] = ema_param.to(device)
+
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        """
+        Updates the EMA weights at the end of each training batch.
+        """
+        for name, param in pl_module.named_parameters():
+            if param.requires_grad:
+                self.ema_weights[name].data = (
+                    self.decay * self.ema_weights[name].data + (1 - self.decay) * param.data
+                )
+
+    def on_validation_epoch_start(self, trainer, pl_module):
+        """
+        Replaces the model's weights with EMA weights before validation.
+        """
+        print("Replacing model weights with EMA weights for validation")
+        self._backup_and_apply_ema(pl_module)
+
+    def on_validation_epoch_end(self, trainer, pl_module):
+        """
+        Restores the original model weights after validation.
+        """
+        print("Restoring original model weights after validation")
+        self._restore_original_weights(pl_module)
+
+    def _backup_and_apply_ema(self, pl_module):
+        """
+        Backs up the model's weights and applies the EMA weights.
+        """
+        self.backup_weights = {}
+        for name, param in pl_module.named_parameters():
+            if param.requires_grad:
+                self.backup_weights[name] = param.clone().detach()
+                param.data.copy_(self.ema_weights[name].data)
+
+    def _restore_original_weights(self, pl_module):
+        """
+        Restores the original model weights from the backup.
+        """
+        for name, param in pl_module.named_parameters():
+            if param.requires_grad:
+                param.data.copy_(self.backup_weights[name].data)
+
+    def state_dict(self):
+        """
+        Saves the EMA weights for checkpointing.
+        """
+        return {"ema_weights": self.ema_weights}
+
+    def load_state_dict(self, state_dict):
+        """
+        Loads the EMA weights from a checkpoint.
+        """
+        self.ema_weights = state_dict["ema_weights"]

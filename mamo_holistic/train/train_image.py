@@ -46,7 +46,7 @@ class DDSMImageClassifier(pl.LightningModule):
         self.mixup_alpha = get_parameter(config, ["LightningModule", "mixup_alpha"], default=-1)
         self.model_name = get_parameter(config, ["LightningModule", "model_name"])
         self.model_params = get_parameter(config, ["LightningModule", "model_params"], default={})
-
+        self.test_time_augmentation = get_parameter(config, ["LightningModule", "test_time_augmentation"], default=False)
     
 
         # Save hyperparameters
@@ -163,15 +163,14 @@ class DDSMImageClassifier(pl.LightningModule):
         mask = batch[2]
         image_id = batch[3]
         
-        x_rl = torch.flip(x, [3])
-        x_ud = torch.flip(x, [2])
-        x_ud_rl = torch.flip(x_ud, [3])
-        
-        x = torch.cat((x, x_rl, x_ud, x_ud_rl), dim=0)
-        y = torch.cat((y, y, y, y), dim=0)
-        image_id = image_id * 4
-        
-        
+        if self.test_time_augmentation:
+            x_rl = torch.flip(x, [3])
+            x_ud = torch.flip(x, [2])
+            x_ud_rl = torch.flip(x_ud, [3])
+            
+            x = torch.cat((x, x_rl, x_ud, x_ud_rl), dim=0)
+            y = torch.cat((y, y, y, y), dim=0)
+            image_id = image_id * 4        
         
         logits = self(x)
         loss = self.loss_fn(logits, y)
@@ -343,6 +342,11 @@ def create_callbacks(config):
         elif callback_name == "FreezePatchLayersCallback":
             from utils.callbacks import FreezePatchLayersCallback
             callbacks.append(FreezePatchLayersCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "EMACallback":
+            from utils.callbacks import EMACallback
+            callbacks.append(EMACallback(**callbacks_dict[callback_name]))
+
+
 
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
