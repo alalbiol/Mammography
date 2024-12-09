@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-import tensorflow as tf
 import numpy as np
 import sys
 
@@ -173,6 +172,8 @@ class NikulinImage(nn.Module):
         self.patch_model_keys = [] #filled in load_weights_from_patch_model
         
     def load_weights_from_tf(self, checkpoint_path, exp_moving_avg=True, verbose=False):
+        import tensorflow as tf
+
         checkpoint = tf.train.load_checkpoint(checkpoint_path)
 
         for name, module in self.named_modules():
