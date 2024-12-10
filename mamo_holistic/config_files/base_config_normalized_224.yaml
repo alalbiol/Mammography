@@ -3,7 +3,7 @@ General:
   gpu_type: "RTX 3090" 
 
 Datamodule:
-  batch_size: 40
+  batch_size: 50
   num_workers: 16
   pin_memory: True
   train_set:
@@ -24,24 +24,25 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_patch
-  name: patches_224_nikulin_balanced
+  name: ddsm_patch_224_nikulin_balanced_mixup_ema
   save_dir: /tmp/logs/ddsm_patch_224_nikulin
 
 LightningModule:
   model_name: nikulin
-  learning_rate: 0.001
+  learning_rate: 0.0001
   optimizer_type: adam
   num_classes: 5
   lr_scheduler: ReduceLROnPlateau
   lr_scheduler_options:
     mode: max
     factor: 0.5
-    patience: 20
+    patience: 80
     min_lr: 1.e-8
   loss_name: smoothed_cross_entropy
   loss_params:
     smoothing: 0.1
     num_classes: 5
+  mixup_alpha: 0.4
 
 Trainer:
   max_epochs: 200
@@ -65,8 +66,10 @@ Callbacks:
     monitor: val_auroc
     mode: max
     save_top_k: 1
-    dirpath: /tmp/checkpoints/ddsm_patch_224_nikulin
+    dirpath: /tmp/checkpoints/ddsm_patch_224_nikulin_balanced_mixup_ema
     filename: best_model_nikulin_patch_{epoch}-{step}-{val_auroc:.2f}
     verbose: True
+  EMACallback:
+    decay: 0.9
   
   

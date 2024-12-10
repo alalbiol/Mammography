@@ -23,4 +23,4 @@ echo "Current working directory: $(pwd)"
 
 #run experiments for resnet18, resnet34, resnet50 with 224x224 patches
 
-python train/train.py --config config_files/base_config_normalized_224.yaml 
+python train/train.py --config config_files/base_config_normalized_448.yaml 
