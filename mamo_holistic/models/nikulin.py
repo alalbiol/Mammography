@@ -8,7 +8,9 @@ import sys
 
 class NikulinPatchModel(nn.Module):
     def __init__(self,**kwargs):
-        super(NikulinPatchModel, self).__init__()
+        super().__init__()
+        
+        final_pool = kwargs.get("final_pool", "avg")
 
         self.bn1 = nn.BatchNorm2d(1)
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
@@ -53,7 +55,14 @@ class NikulinPatchModel(nn.Module):
         self.bn15 =  nn.BatchNorm2d(512)
         self.fc3 = nn.Conv2d(512, 5 , kernel_size=1, stride=1)
         # adaptive average pooling
-        self.final_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        if final_pool == "avg":
+            print("Using adaptive avg pool")
+            self.final_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        elif final_pool == "max":
+            print("Using adaptive max pool")
+            self.final_avg_pool = nn.AdaptiveMaxPool2d((1, 1))
+        else:
+            raise ValueError("final_pool must be 'avg' or 'max'")
     
     def forward(self,x):
         x = self.bn1(x)
@@ -99,10 +108,21 @@ class NikulinPatchModel(nn.Module):
         x = self.bn15(x)
         x = self.fc3(x)
         
+        #print("Shape before final avg pool: ", x.shape)
+        
         x = self.final_avg_pool(x)
         
         x = x.view(x.size(0), -1)
         return x
+
+    def load_weights_from_patch_model(self, pth_file):
+        # loads weights from a patch model trained with pytorch lightning
+        pl_checkpoint = torch.load(pth_file)
+        state_dict = pl_checkpoint['state_dict']
+        new_state_dict = {k.replace('model.', ''): v for k, v in state_dict.items() if k.startswith('model.')}
+
+        self.load_state_dict(state_dict, strict=False)
+        
 
 
 class NikulinImage(nn.Module):

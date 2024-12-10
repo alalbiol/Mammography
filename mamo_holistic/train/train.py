@@ -50,6 +50,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.loss_name = get_parameter(config, ["LightningModule", "loss_name"], default="cross_entropy")
         self.loss_params = get_parameter(config, ["LightningModule", "loss_params"], default={})
         self.mixup_alpha = get_parameter(config, ["LightningModule", "mixup_alpha"], default=-1)
+        self.pretrained_weights = get_parameter(config, ["LightningModule", "pretrained_weights"], default=None)
 
         assert isinstance(self.lr_scheduler_options['min_lr'],float), "min_lr must be a float"
 
@@ -96,6 +97,10 @@ class DDSMPatchClassifier(pl.LightningModule):
         ]
         self.class_to_idx = {class_name: i for i, class_name in enumerate(class_names)}
         self.idx_to_class = {i: class_name for i, class_name in enumerate(class_names)}
+        
+        if self.pretrained_weights is not None:
+            print("Loading pretrained weights from: ", self.pretrained_weights)
+            self.model.load_weights_from_patch_model(self.pretrained_weights)
 
 
         
@@ -404,6 +409,10 @@ def create_callbacks(config):
             from utils.callbacks import GradientNormLoggerCallback
             params = callbacks_dict[callback_name] if callbacks_dict[callback_name] is not None else {}
             callbacks.append(GradientNormLoggerCallback(**params))
+        elif callback_name == "EMACallback":
+            from utils.callbacks import EMACallback
+            callbacks.append(EMACallback(**callbacks_dict[callback_name]))
+
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
     return callbacks
