@@ -8,3 +8,4 @@ Nikulin/package/*
 *.pt
 mamo_holistic/lightning_logs/*
 */checkpoints/*
+nohup.out
