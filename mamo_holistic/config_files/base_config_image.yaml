@@ -22,8 +22,8 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_image
-  name: nikulin_image_lr_1e-4_patch_448
-  save_dir: /tmp/logs/nikulin_image_lr_1e-4_patch_448
+  name: nikulin_image_lr_1e-4_patch_448_mixup
+  save_dir: /tmp/logs/nikulin_image_lr_1e-4_patch_448_mixup
 
 LightningModule:
   model_name: nikulin
@@ -75,7 +75,7 @@ Callbacks:
     mode: max
     save_top_k: 1
     dirpath: /tmp/logs/nikulin_image
-    filename: best_model_nikulin_image-from-448-{step}-{val_auroc:.2f}
+    filename: best_model_nikulin_image-from-448_mixup-{step}-{val_auroc:.2f}
     verbose: True
   #EMACallback:
   #  decay: 0.9
