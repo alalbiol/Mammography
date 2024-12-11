@@ -1,0 +1,75 @@
+General:
+  source_root: /home/alalbiol/Programacion/Mammography/mamo_holistic
+  gpu_type: "RTX 3090" 
+
+Datamodule:
+  batch_size: 50
+  num_workers: 16
+  pin_memory: True
+  train_set:
+    ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_1152x896
+    split_csv:  resources/ddsm/ddsm_nikulin_partitions/train_filenames.txt
+    ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1152_896.json.gz
+    patch_size: 224
+    convert_to_rgb: True
+    normalize_input: True
+    include_normals: True
+    #subset_size_train: 1000
+  val_set:
+    eval_patches_root: /home/alalbiol/Data/mamo/eval_patches_16bits_224_test_nikulin
+    convert_to_rgb: False
+  #subset_size_test: 100
+
+
+Logger:
+  type: wandb
+  project: ddsm_patch
+  name: swin_base_224_pretrained
+  save_dir: /tmp/logs/ddsm_patch_224_nikulin
+
+LightningModule:
+  model_name: swin_base_patch4_window7_224
+  learning_rate: 0.0001
+  optimizer_type: adam
+  num_classes: 5
+  #lr_scheduler: ReduceLROnPlateau
+  # lr_scheduler_options:
+  #   mode: max
+  #   factor: 0.5
+  #   patience: 80
+  #   min_lr: 1.e-8
+  loss_name: smoothed_cross_entropy
+  loss_params:
+    smoothing: 0.1
+    num_classes: 5
+  mixup_alpha: 0.4
+
+Trainer:
+  max_epochs: 200
+  #gradient_clip_val: 5.0  # Maximum norm of gradients
+  #gradient_clip_algorithm: norm
+
+
+
+Callbacks:
+  # EarlyStopping:
+  #   monitor: val_loss
+  #   mode: min
+  #   patience: 60
+  #   verbose: True
+  VisualizeBatchPatches:
+    num_rows: 2
+  LearningRateMonitor:
+    logging_interval: 'epoch'
+  #GradientNormLogger:
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 1
+    dirpath: /tmp/checkpoints/ddsm_patch_224_nikulin_balanced_mixup_ema
+    filename: best_model_nikulin_patch_{epoch}-{step}-{val_auroc:.2f}
+    verbose: True
+  #EMACallback:
+  #  decay: 0.9
+  
+  

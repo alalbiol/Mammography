@@ -32,4 +32,5 @@ dependencies:
     - pytorch-lightning
     - SimpleITK
     - shapely
+    - timm
   

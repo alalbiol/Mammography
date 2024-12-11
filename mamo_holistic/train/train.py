@@ -52,7 +52,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.mixup_alpha = get_parameter(config, ["LightningModule", "mixup_alpha"], default=-1)
         self.pretrained_weights = get_parameter(config, ["LightningModule", "pretrained_weights"], default=None)
 
-        assert isinstance(self.lr_scheduler_options['min_lr'],float), "min_lr must be a float"
+        if 'min_lr' in self.lr_scheduler_options:
+            assert isinstance(self.lr_scheduler_options['min_lr'],float), "min_lr must be a float"
 
         # Save hyperparameters
         self.save_hyperparameters({

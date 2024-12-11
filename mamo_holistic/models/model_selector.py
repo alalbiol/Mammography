@@ -47,6 +47,18 @@ def get_patch_model(model_name, num_classes = 5,  **kwargs):
         bn = nn.BatchNorm2d(3)
         
         model = nn.Sequential(bn, model)
+    
+    if model_name == "swin_base_patch4_window7_224":
+        import timm
+        print("Using Swin Transformer model")
+        pretrained = kwargs.get("pretrained", False)
+        image_size = kwargs.get("image_size", 224)
+        model = timm.create_model(model_name, pretrained=pretrained)
+        model.head.fc = nn.Linear(model.head.fc.in_features, num_classes)
+            
+        model.set_input_size(image_size)
+        
+        
         
         return model
     
