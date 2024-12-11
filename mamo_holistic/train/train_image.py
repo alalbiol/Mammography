@@ -124,8 +124,18 @@ class DDSMImageClassifier(pl.LightningModule):
         x = batch[0]
         y = batch[1]
         
+                
+               #check if mixup is enabled
+        if  self.mixup_alpha > 0:
+            x, y_a, y_b, lam = mixup_data(x, y, self.mixup_alpha)
+            y = y_a if lam > 0.5 else y_b
+            logits = self(x)
+            loss = lam * self.loss_fn(logits, y_a) + (1 - lam) * self.loss_fn(logits, y_b)
+        else:        
+            logits = self(x)
+            loss = self.loss_fn(logits, y)
         
-        logits = self(x)
+        
         
         preds = torch.argmax(logits, dim=1)
                 

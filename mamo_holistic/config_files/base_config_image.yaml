@@ -22,13 +22,14 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_image
-  name: nikulin_image_lr_1e-4_ema
-  save_dir: /tmp/logs/ddsm_patch_224
+  name: nikulin_image_lr_1e-4_patch_448
+  save_dir: /tmp/logs/nikulin_image_lr_1e-4_patch_448
 
 LightningModule:
   model_name: nikulin
   model_params:
-    patch_model_weights_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/best_model_nikulin_patch_epoch=94-step=9690-val_auroc=0.87.ckpt
+    patch_model_weights_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/best_model_nikulin_patch_448_epoch=172-step=22663-val_auroc=0.87.ckpt
+    #patch_model_weights_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/best_model_nikulin_patch_epoch=94-step=9690-val_auroc=0.87.ckpt
     #ckpt_path: /home/alalbiol/Programacion/mammography/others/nikulin/data/SC1_nets/Final_Round_RC1/best_model.ckpt-3750
     #ckpt_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/Nikulin/package/SC1_nets/3rd_Round_RC1/best_model.ckpt-3500
   learning_rate: 0.0001
@@ -45,6 +46,7 @@ LightningModule:
   #  patience: 20
   #  min_lr: 1.e-8
   test_time_augmentation: True
+  mixup_alpha: 0.3
 
 
 Trainer:
@@ -67,15 +69,15 @@ Callbacks:
   LearningRateMonitor:
     logging_interval: 'epoch'
   FreezePatchLayersCallback:
-    freeze_epochs: 3
+    freeze_epochs: 5
   ModelCheckpoint:
     monitor: val_auroc
     mode: max
     save_top_k: 1
     dirpath: /tmp/logs/nikulin_image
-    filename: best_model_nikulin_image-{step}-{val_auroc:.2f}
+    filename: best_model_nikulin_image-from-448-{step}-{val_auroc:.2f}
     verbose: True
-  EMACallback:
-    decay: 0.9
+  #EMACallback:
+  #  decay: 0.9
   
   
