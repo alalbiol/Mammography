@@ -22,8 +22,8 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_image
-  name: nikulin_image_lr_1e-4_patch_448_mixup
-  save_dir: /tmp/logs/nikulin_image_lr_1e-4_patch_448_mixup
+  name: nikulin_image_lr_1e-4_patch_448_mask_lession
+  save_dir: /tmp/logs/nikulin_image_lr_1e-4_patch_448_mask_lession
 
 LightningModule:
   model_name: nikulin
@@ -46,7 +46,7 @@ LightningModule:
   #  patience: 20
   #  min_lr: 1.e-8
   test_time_augmentation: True
-  mixup_alpha: 0.3
+  #mixup_alpha: 0.3
 
 
 Trainer:
@@ -75,7 +75,7 @@ Callbacks:
     mode: max
     save_top_k: 1
     dirpath: /tmp/logs/nikulin_image
-    filename: best_model_nikulin_image-from-448_mixup-{step}-{val_auroc:.2f}
+    filename: best_model_nikulin_image-from-448_mask_lession-{step}-{val_auroc:.2f}
     verbose: True
   #EMACallback:
   #  decay: 0.9

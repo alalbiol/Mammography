@@ -1170,13 +1170,22 @@ class DDSM_Image_Dataset(Dataset):
         else:
             image = np.expand_dims(image, axis=0)
         
-        image = torch.from_numpy(image).float()        
+            
+        image = torch.from_numpy(image).float()   
         
-      
         if self.intensity_transform is not None:
             image = self.intensity_transform(image)
+      
                 
         if mask is not None:
+            
+            p = np.random.rand()
+            if p < 0.1 and label == 1:
+                background = (mask == 0).astype(float)
+                background = np.expand_dims(background, axis=0)
+                background = torch.from_numpy(background).float()
+                image = image * background
+                label = 0         
             return image, label, mask, pathlib.Path(image_id).stem
         return image, label, pathlib.Path(image_id).stem
     
