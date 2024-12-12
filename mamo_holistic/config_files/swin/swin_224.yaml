@@ -42,10 +42,10 @@ LightningModule:
   loss_params:
     smoothing: 0.1
     num_classes: 5
-  mixup_alpha: 0.4
+  #mixup_alpha: 0.4
 
 Trainer:
-  max_epochs: 200
+  max_epochs: 50
   #gradient_clip_val: 5.0  # Maximum norm of gradients
   #gradient_clip_algorithm: norm
 
@@ -57,19 +57,19 @@ Callbacks:
   #   mode: min
   #   patience: 60
   #   verbose: True
-  VisualizeBatchPatches:
-    num_rows: 2
+  #VisualizeBatchPatches:
+  #  num_rows: 2
   LearningRateMonitor:
     logging_interval: 'epoch'
   #GradientNormLogger:
-  ModelCheckpoint:
-    monitor: val_auroc
-    mode: max
-    save_top_k: 1
-    dirpath: /tmp/checkpoints/ddsm_patch_224_nikulin_balanced_mixup_ema
-    filename: best_model_nikulin_patch_{epoch}-{step}-{val_auroc:.2f}
-    verbose: True
-  #EMACallback:
+  #ModelCheckpoint:
+  #   monitor: val_auroc
+  #   mode: max
+  #   save_top_k: 1
+  #   dirpath: /tmp/checkpoints/ddsm_patch_224_nikulin_balanced_mixup_ema
+  #   filename: best_model_nikulin_patch_{epoch}-{step}-{val_auroc:.2f}
+  #   verbose: True
+  # #EMACallback:
   #  decay: 0.9
   
   

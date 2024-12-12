@@ -1,0 +1,12 @@
+
+
+
+Logger:
+  name: swin_s3_small_224
+  save_dir: /tmp/logs/swin_s3_small_224
+
+LightningModule:
+  model_name: swin_s3_small_224
+  
+
+  

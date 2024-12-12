@@ -10,7 +10,7 @@ Datamodule:
   convert_to_rgb: True
   return_mask: True
   #ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_1152x896
-  batch_size: 24
+  batch_size: 1
   balanced_patches: True
   num_workers: 32
   pin_memory: True
@@ -22,11 +22,11 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_image
-  name: nikulin_image_lr_1e-4_patch_448_mask_lession
+  name: swin_image_pretrained
   save_dir: /tmp/logs/nikulin_image_lr_1e-4_patch_448_mask_lession
 
 LightningModule:
-  model_name: nikulin
+  model_name: swin_base_patch4_window7_224
   model_params:
     patch_model_weights_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/best_model_nikulin_patch_448_epoch=172-step=22663-val_auroc=0.87.ckpt
     #patch_model_weights_path: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/best_model_nikulin_patch_epoch=94-step=9690-val_auroc=0.87.ckpt
@@ -45,7 +45,7 @@ LightningModule:
   #  factor: 0.5
   #  patience: 20
   #  min_lr: 1.e-8
-  test_time_augmentation: True
+  #test_time_augmentation: True
   #mixup_alpha: 0.3
 
 
@@ -53,6 +53,7 @@ Trainer:
   max_epochs: 600
   log_every_n_steps: 3
   precision: 16-mixed
+  accumulate_grad_batches: 10
   #check_val_every_n_epoch: 10
   #limit_train_batches: 10
 
@@ -68,8 +69,8 @@ Callbacks:
     num_rows: 2
   LearningRateMonitor:
     logging_interval: 'epoch'
-  FreezePatchLayersCallback:
-    freeze_epochs: 5
+  #FreezePatchLayersCallback:
+  #  freeze_epochs: 5
   ModelCheckpoint:
     monitor: val_auroc
     mode: max

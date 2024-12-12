@@ -79,8 +79,7 @@ class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
         self.labels = dataset.get_all_targets()
         self.pos_indices = np.where(self.labels == True)[0]
         self.neg_indices = np.where(self.labels == False)[0]
-        self.num_batches = int(np.ceil(min(len(self.pos_indices), len(self.neg_indices)) / (batch_size // 2)))
-        
+        self.dataset_size = (len(self.labels) // 2) * 2
 
     def __iter__(self):
         num_pos_per_batch = self.batch_size // 2
@@ -90,24 +89,16 @@ class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
         pos_indices = np.random.permutation(self.pos_indices)
         neg_indices = np.random.permutation(self.neg_indices)
         
-        pos_indices = np.resize(pos_indices, num_pos_per_batch * self.num_batches) # Now multiple of batch size/2 and num_batches
-        neg_indices = np.resize(neg_indices, num_neg_per_batch * self.num_batches)        
+        pos_indices = np.resize(pos_indices, self.dataset_size // 2) 
+        neg_indices = np.resize(neg_indices, self.dataset_size // 2) 
         
+        interleaved_indices = np.array([pos_indices, neg_indices]).T
+        interleaved_indices = interleaved_indices.reshape(-1)
         
-
-        
-        pos_batches = np.array_split(pos_indices, self.num_batches)
-        neg_batches = np.array_split(neg_indices, self.num_batches)
-
-        for pos_batch, neg_batch in zip(pos_batches, neg_batches):
-            batch_indices = np.concatenate([pos_batch, neg_batch])
-            np.random.shuffle(batch_indices)
-            batch_indices = iter(batch_indices.tolist())
-            for _ in range(self.batch_size):
-                yield next(batch_indices)
+        return iter(interleaved_indices)
             
     def __len__(self):
-        return self.num_batches * self.batch_size  # Total number of samples
+        return self.dataset_size # Total number of samples
 
  
 
@@ -1324,7 +1315,7 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                     intensity_transform=intensity_transform,
                                     return_mask=self.return_mask)  
         
-        test_batch_size = self.batch_size // 4 # so we can TTA easily
+        test_batch_size = self.batch_size  # so we can TTA easily
         dataloader = DataLoader(dataset, batch_size=test_batch_size, shuffle=False, num_workers=self.num_workers)
         return dataloader
     

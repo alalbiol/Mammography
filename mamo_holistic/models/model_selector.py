@@ -48,18 +48,16 @@ def get_patch_model(model_name, num_classes = 5,  **kwargs):
         
         model = nn.Sequential(bn, model)
     
-    if model_name == "swin_base_patch4_window7_224":
+    if "swin" in model_name:
         import timm
-        print("Using Swin Transformer model")
-        pretrained = kwargs.get("pretrained", False)
+        print("Using Swin Transformer model:", model_name)
+        pretrained = kwargs.get("pretrained", True)
         image_size = kwargs.get("image_size", 224)
         model = timm.create_model(model_name, pretrained=pretrained)
         model.head.fc = nn.Linear(model.head.fc.in_features, num_classes)
             
         model.set_input_size(image_size)
-        
-        
-        
+             
         return model
     
     
@@ -86,6 +84,32 @@ def get_image_model(model_name, num_classes = 2,  **kwargs):
             model.load_weights_from_tf(kwargs["ckpt_path"])
         
         return model
+    
+    if model_name == "swin_base_patch4_window7_224":
+        import timm
+        print("Using Swin Transformer model")
+        pretrained = kwargs.get("pretrained", True)
+        image_size = kwargs.get("image_size", (1152,896))
+        model = timm.create_model(model_name, pretrained=pretrained)
+        model.head.fc = nn.Linear(model.head.fc.in_features, num_classes)
+            
+        model.set_input_size(image_size)
+        
+        return model
+    
+    if model_name == "swin_tiny_patch4_window7_224":
+        import timm
+        print("Using Swin Transformer model")
+        pretrained = kwargs.get("pretrained", True)
+        image_size = kwargs.get("image_size", (1152,896))
+        model = timm.create_model(model_name, pretrained=pretrained)
+        model.head.fc = nn.Linear(model.head.fc.in_features, num_classes)
+            
+        model.set_input_size(image_size)
+        
+        return model
+        
+        
     
     
     
