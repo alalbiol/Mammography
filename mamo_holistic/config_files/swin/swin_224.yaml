@@ -42,7 +42,7 @@ LightningModule:
   loss_params:
     smoothing: 0.1
     num_classes: 5
-  #mixup_alpha: 0.4
+  mixup_alpha: 0.4
 
 Trainer:
   max_epochs: 50

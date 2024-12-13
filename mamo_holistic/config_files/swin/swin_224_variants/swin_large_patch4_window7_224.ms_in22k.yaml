@@ -1,0 +1,14 @@
+
+
+
+Logger:
+  name: swin_large_patch4_window7_224.ms_in22k_mixup_freeze_lr_1e-5
+  save_dir: /tmp/logs/swin_large_patch4_window7_224.ms_in22k_mixup
+
+LightningModule:
+  model_name: swin_large_patch4_window7_224.ms_in22k
+  learning_rate: 0.00001
+
+Callbacks:
+  FreezeSwinLayersCallback:
+    freeze_epochs: 2

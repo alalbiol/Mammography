@@ -29,26 +29,35 @@ echo "Current working directory: $(pwd)"
 # python train/train.py --config config_files/swin/swin_224.yaml    \
 #             --overrides  config_files/swin/swin_224_variants/swin_s3_base_224.yaml
 
-python train/train.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_224_variants/swin_s3_small_224.yaml
+# python train/train.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_224_variants/swin_s3_small_224.yaml
 
-python train/train.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_224_variants/swin_s3_tiny_224.yaml
+# python train/train.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_224_variants/swin_s3_tiny_224.yaml
 
 # python train/train.py --config config_files/swin/swin_224.yaml    \
 #             --overrides  config_files/swin/swin_224_variants/swin_tiny_patch4_window7_224.yaml
 
-python train/train.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_224_variants/swin2_cr_small_224.yaml
+# python train/train.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_224_variants/swinv2_cr_small_224.yaml
 
-python train/train.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_224_variants/swin2_cr_small_ns_224
+# python train/train.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_224_variants/swinv2_cr_small_ns_224
 
-python train/train.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_224_variants/swin2_cr_tiny_224.yaml
+# python train/train.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_224_variants/swinv2_cr_tiny_224.yaml
 
-python train/train.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_224_variants/swin2_cr_tiny_ns_224.yaml
+# python train/train.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_224_variants/swinv2_cr_tiny_ns_224.yaml
+
+
+#  python train/train.py --config config_files/swin/swin_224.yaml    \
+#              --overrides  config_files/swin/swin_224_variants/swin_base_patch4_window7_224.ms_in22k.yaml
+
+ python train/train.py --config config_files/swin/swin_224.yaml    \
+             --overrides  config_files/swin/swin_224_variants/swin_large_patch4_window7_224.ms_in22k.yaml
+
+
 
 
 # config_files/swin/swin_224_variants/swin_base_patch4_window7_224.yaml  config_files/swin/swin_224_variants/swin_s3_tiny_224.yaml              config_files/swin/swin_224_variants/swinv2_cr_small_ns_224.yaml
