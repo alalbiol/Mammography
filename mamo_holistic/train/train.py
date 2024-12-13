@@ -268,7 +268,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         # Plot and log ROC and PR curves
         fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)
-        fig_roc, ax_roc = plot_roc_curve(fpr, tpr)
+        fig_roc, ax_roc = plot_roc_curve(fpr, tpr, auroc_value=auroc)
         fig_pr, ax_pr = plot_pr_curve(precision, recall)
         
         if isinstance(self.trainer.logger, WandbLogger):
@@ -336,7 +336,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         # Plot and log ROC and PR curves
         fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)
-        fig_roc, ax_roc = plot_roc_curve(fpr, tpr)
+        fig_roc, ax_roc = plot_roc_curve(fpr, tpr, auroc_value=auroc)
         fig_pr, ax_pr = plot_pr_curve(precision, recall)
         
         if isinstance(self.trainer.logger, WandbLogger):
@@ -413,6 +413,9 @@ def create_callbacks(config):
         elif callback_name == "EMACallback":
             from utils.callbacks import EMACallback
             callbacks.append(EMACallback(**callbacks_dict[callback_name]))
+        elif callback_name == "FreezeSwinLayersCallback":
+            from utils.callbacks import FreezeSwinLayersCallback
+            callbacks.append(FreezeSwinLayersCallback(**callbacks_dict[callback_name]))
 
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
