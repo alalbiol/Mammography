@@ -253,6 +253,30 @@ class FreezePatchLayersCallback(Callback):
         else:
             pl_module.model.unfreeze_patch_layers()
             print(f"Epoch {current_epoch}: Patch layers unfrozen")
+
+class FreezeSwinLayersCallback(Callback):
+    def __init__(self, freeze_epochs=2):
+        super().__init__()
+        self.freeze_epochs = freeze_epochs
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        current_epoch = trainer.current_epoch
+        if current_epoch < self.freeze_epochs:
+            
+            swin_model = pl_module.model
+            for param in swin_model.parameters():
+                param.requires_grad = False
+            
+            for param in swin_model.head.fc.parameters():
+                param.requires_grad = True   
+            print(f"Epoch {current_epoch}: Swin layers frozen except the last layer")
+        else:
+            swin_model = pl_module.model
+            for param in swin_model.parameters():
+                param.requires_grad = True
+            print(f"Epoch {current_epoch}: Patch layers unfrozen")
+
+
             
 class EMACallback(Callback):
     def __init__(self, decay=0.999):
