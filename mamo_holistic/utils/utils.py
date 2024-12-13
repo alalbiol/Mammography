@@ -104,13 +104,15 @@ def str_to_bool(value):
     
 
 
-def plot_roc_curve(fpr, tpr, ax=None):
+def plot_roc_curve(fpr, tpr, auroc_value = None,  ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     ax.plot(fpr, tpr, label='ROC curve')
     ax.plot([0, 1], [0, 1], 'k--')
     ax.set_xlabel('False Positive Rate')
     ax.set_ylabel('True Positive Rate')
+    if auroc_value is not None:
+        ax.text(0.6, 0.2, f'AUC = {auroc_value:.2f}', fontsize=12)
     ax.set_title('Receiver Operating Characteristic')
     return fig, ax
 
