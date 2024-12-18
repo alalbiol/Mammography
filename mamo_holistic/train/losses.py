@@ -28,10 +28,10 @@ def get_loss(loss_name, **kwargs):
         print("kwargs: ", kwargs)
         return nn.CrossEntropyLoss(**kwargs)
     
-    if loss_name == "smoothed_cross_entropy":
-        print("Using Smoothed CrossEntropy loss")
-        print("kwargs: ", kwargs)
-        return SmoothedCrossEntropyLoss(**kwargs)
+    # if loss_name == "smoothed_cross_entropy":
+    #     print("Using Smoothed CrossEntropy loss")
+    #     print("kwargs: ", kwargs)
+    #     return SmoothedCrossEntropyLoss(**kwargs)
     
     raise ValueError(f"Loss {loss_name} not found.")
 
