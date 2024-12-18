@@ -50,13 +50,45 @@ def get_patch_model(model_name, num_classes = 5,  **kwargs):
     
     if "swin" in model_name:
         import timm
+        
+
         print("Using Swin Transformer model:", model_name)
+        print("Arguments:", kwargs)
         pretrained = kwargs.get("pretrained", True)
         image_size = kwargs.get("image_size", 224)
         model = timm.create_model(model_name, pretrained=pretrained)
-        model.head.fc = nn.Linear(model.head.fc.in_features, num_classes)
-            
+        model.head.fc = nn.Sequential(nn.Dropout(0.5),
+            nn.Linear(model.head.fc.in_features, num_classes)
+            )               
         model.set_input_size(image_size)
+        
+        if "LoRA" in kwargs:
+            from peft import get_peft_model, LoraConfig, TaskType
+            task_type=TaskType.FEATURE_EXTRACTION
+            print("Using LoRA")
+            r = kwargs["LoRA"].get("r", 64)
+            lora_alpha = kwargs["LoRA"].get("alpha", 32)
+            lora_dropout = kwargs["LoRA"].get("dropout", 0.2)
+            target_modules = kwargs["LoRA"].get("target_modules", ["qkv"])
+        
+            lora_config = LoraConfig(
+                r=r,
+                lora_alpha=lora_alpha,
+                lora_dropout=lora_dropout,
+                target_modules=target_modules,  # Default for transformer models
+            )
+            
+            model = get_peft_model(model, lora_config)
+            
+        trainable_gray2RGB = kwargs.get("trainable_gray2RGB", False)
+        
+        if trainable_gray2RGB:
+            print("Trainable gray2RGB")
+            from models.modules import Gray2RGBadaptor
+            model = nn.Sequential(
+                Gray2RGBadaptor(), 
+                model)
+            
              
         return model
     
@@ -85,10 +117,9 @@ def get_image_model(model_name, num_classes = 2,  **kwargs):
         
         return model
     
-    if model_name == "swin_base_patch4_window7_224":
+    if "swin" in model_name:
         import timm
         print("Using Swin Transformer model")
-        pretrained = kwargs.get("pretrained", True)
         image_size = kwargs.get("image_size", (1152,896))
         model = timm.create_model(model_name, pretrained=pretrained)
         model.head.fc = nn.Linear(model.head.fc.in_features, num_classes)
