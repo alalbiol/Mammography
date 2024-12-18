@@ -40,6 +40,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         
           # Fetch hyperparameters from config
         self.model_name = get_parameter(config, ["LightningModule", "model_name"])
+        self.model_params = get_parameter(config, ["LightningModule", "model_params"], default={})
         self.num_classes = get_parameter(config, ["LightningModule", "num_classes"])
         self.optimizer_type = get_parameter(config, ["LightningModule", "optimizer_type"])
         self.learning_rate = get_parameter(config, ["LightningModule", "learning_rate"])
@@ -70,7 +71,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         })
         
         # Define a pre-trained model (ResNet18 in this case)
-        self.model = get_patch_model(self.model_name, num_classes=self.num_classes)
+        self.model = get_patch_model(self.model_name, num_classes=self.num_classes, **self.model_params)
         
         self.loss_fn = get_loss(self.loss_name, **self.loss_params)
         
@@ -108,6 +109,8 @@ class DDSMPatchClassifier(pl.LightningModule):
     def configure_optimizers(self): # called by the trainer
         if self.optimizer_type.lower() == "adam":
             optimizer =  torch.optim.Adam(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
+        elif self.optimizer_type.lower() == "adamw":
+            optimizer =  torch.optim.AdamW(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
         elif self.optimizer_type.lower() == "sgd":
             optimizer =  torch.optim.SGD(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
         else:
@@ -181,7 +184,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.train_confusion_matrix(preds, y)
         
         self.log("train_acc", acc, prog_bar=True)       
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, prog_bar=False)
         
         # Store outputs and targets for AUROC and PRROC calculation
         self.train_outputs = torch.cat((self.train_outputs, logits.detach().cpu()), dim=0)
@@ -213,12 +216,12 @@ class DDSMPatchClassifier(pl.LightningModule):
             self.total[i] += torch.sum(y == i).item()  # Total instances of class i
 
         # Log the loss (optional)
-        self.log("val/loss", loss, prog_bar=True)
+        #self.log("val/loss", loss, prog_bar=False)
         
         
         acc = (preds == y).float().mean() # global accuracy
-        self.log("val_loss", loss, prog_bar=True)
-        self.log("val_acc", acc, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=False)
+        self.log("val_acc", acc, prog_bar=False)
         
         # Store outputs and targets for AUROC and PRROC calculation
         self.val_outputs = torch.cat((self.val_outputs, logits.detach().cpu()), dim=0)
@@ -246,7 +249,7 @@ class DDSMPatchClassifier(pl.LightningModule):
             experiment.log({"train/train confusion_matrix": wandb.Image(fig2img(fig))})
         self.train_confusion_matrix.reset()
         
-        self.log("train/train_acc_epoch", self.train_accuracy.compute(), prog_bar=True)
+        self.log("train/train_acc_epoch", self.train_accuracy.compute(), prog_bar=False)
         self.train_accuracy.reset()
         
            # Calculate cancer probability
@@ -264,7 +267,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         # Log AUROC and PRROC
         self.log("train_auroc", auroc, prog_bar=True)
-        self.log("train_prroc", prroc, prog_bar=True)
+        self.log("train_prroc", prroc, prog_bar=False)
         
         # Plot and log ROC and PR curves
         fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)
@@ -286,18 +289,18 @@ class DDSMPatchClassifier(pl.LightningModule):
         # Log per-class metrics at epoch end
         for i in range(1,self.num_classes):
             class_name = self.idx_to_class[i]
-            self.log(f"val/precision_class_{class_name}", precision_per_class[i])
-            self.log(f"val/recall_class_{class_name}", recall_per_class[i])
-            self.log(f"val/f1_class_{class_name}", f1_per_class[i])
+            self.log(f"val/precision_class_{class_name}", precision_per_class[i], prog_bar=False)
+            self.log(f"val/recall_class_{class_name}", recall_per_class[i], prog_bar=False)
+            self.log(f"val/f1_class_{class_name}", f1_per_class[i], prog_bar=False)
 
         # Calculate and log macro average
         macro_precision = precision_per_class[1:].mean()
         macro_recall = recall_per_class[1:].mean()
         macro_f1 = f1_per_class[1:].mean()
 
-        self.log("val/macro_precision", macro_precision, prog_bar=True)
-        self.log("val/macro_recall", macro_recall, prog_bar=True)
-        self.log("val/macro_f1", macro_f1, prog_bar=True)
+        self.log("val/macro_precision", macro_precision, prog_bar=False)
+        self.log("val/macro_recall", macro_recall, prog_bar=False)
+        self.log("val/macro_f1", macro_f1, prog_bar=False)
 
         # Reset metrics to avoid accumulation over multiple epochs
         self.tp.zero_()
@@ -332,7 +335,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         # Log AUROC and PRROC
         self.log("val_auroc", auroc, prog_bar=True)
-        self.log("val_prroc", prroc, prog_bar=True)
+        self.log("val_prroc", prroc, prog_bar=False)
         
         # Plot and log ROC and PR curves
         fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)
@@ -416,6 +419,12 @@ def create_callbacks(config):
         elif callback_name == "FreezeSwinLayersCallback":
             from utils.callbacks import FreezeSwinLayersCallback
             callbacks.append(FreezeSwinLayersCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "LoRACallback":
+            from utils.callbacks import LoRACallback
+            callbacks.append(LoRACallback(**callbacks_dict[callback_name]))
+        elif callback_name == "ReduceLROnEpochsCallback":
+            from utils.callbacks import ReduceLROnEpochsCallback
+            callbacks.append(ReduceLROnEpochsCallback(**callbacks_dict[callback_name]))
 
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
