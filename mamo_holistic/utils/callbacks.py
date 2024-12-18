@@ -359,3 +359,86 @@ class EMACallback(Callback):
         Loads the EMA weights from a checkpoint.
         """
         self.ema_weights = state_dict["ema_weights"]
+
+
+
+from torch import nn
+from peft import get_peft_model, LoraConfig, TaskType
+task_type=TaskType.FEATURE_EXTRACTION
+
+
+
+class LoRACallback(Callback):
+    def __init__(self, task_type="FEATURE_EXTRACTION", r=8, lora_alpha=32, lora_dropout=0.1, target_modules=["qkv"]):
+        """
+        Args:
+            task_type (str): Type of task. Must be one of the supported types.
+            r (int): Rank of the LoRA updates.
+            lora_alpha (int): Scaling factor for LoRA updates.
+            lora_dropout (float): Dropout rate applied to LoRA.
+            target_modules (list[str]): List of module names in the model to which LoRA should be applied.
+        """
+        super().__init__()
+        task_type=TaskType.FEATURE_EXTRACTION
+
+        self.lora_config = LoraConfig(
+            task_type=task_type,
+            r=r,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            target_modules=target_modules or ["q", "k", "v"],  # Default for transformer-like layers
+        )
+
+    def setup(self, trainer, pl_module, stage=None):
+        """
+        Called during trainer setup.
+        """
+        if stage == "fit" or stage is None:
+            print("Applying LoRA to the model...")
+            # Wrap the model with LoRA
+            pl_module.model = get_peft_model(pl_module.model, self.lora_config)
+
+    def on_train_start(self, trainer, pl_module):
+        """
+        Called at the start of training.
+        """
+        
+        trainable_params = sum(p.numel() for p in pl_module.model.parameters() if p.requires_grad)
+        print(f"Number of trainable parameters after LoRA: {trainable_params}")
+        
+        
+
+class ReduceLROnEpochsCallback(pl.Callback):
+    def __init__(self, factor=0.1, every_n_epochs=10, min_lr=1e-6):
+        """
+        Callback to reduce the learning rate by a factor every n epochs.
+
+        Args:
+            factor (float): The factor by which to reduce the learning rate (e.g., 0.1 for 10% of the original).
+            every_n_epochs (int): Reduce the learning rate every this many epochs.
+        """
+        super().__init__()
+        self.factor = factor
+        self.every_n_epochs = every_n_epochs
+        self.min_lr = min_lr
+        
+ 
+
+    def on_validation_epoch_end(self, trainer, pl_module):
+        current_epoch = trainer.current_epoch
+
+        if (current_epoch + 1) % self.every_n_epochs == 0:  # Adjust LR every `every_n_epochs`
+            for optimizer in trainer.optimizers:
+                for param_group in optimizer.param_groups:
+                    old_lr = param_group['lr']
+                    
+                    if old_lr <= self.min_lr:
+                        print(f"LR already at minimum value {self.min_lr:.6f} for optimizer {optimizer}")
+                        continue
+                    
+                    new_lr = old_lr * self.factor
+                    if new_lr < self.min_lr:
+                        new_lr = self.min_lr
+                       
+                    param_group['lr'] = new_lr            
+                    print(f"Reduced LR from {old_lr:.6f} to {new_lr:.6f}")
