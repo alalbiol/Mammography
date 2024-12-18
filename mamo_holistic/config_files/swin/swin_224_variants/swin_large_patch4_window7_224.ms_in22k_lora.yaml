@@ -2,13 +2,19 @@
 
 
 Logger:
-  name: swin_large_patch4_window7_224.ms_in22k_mixup_lr_1e-5
+  name: swin_large_patch4_window7_224.ms_in22k_lr_1e-4_mixup
   save_dir: /tmp/logs/swin_large_patch4_window7_224.ms_in22k_mixup
 
 LightningModule:
   model_name: swin_large_patch4_window7_224.ms_in22k
-  learning_rate: 0.00001
+  learning_rate: 0.0001
 
 #Callbacks:
+#  LoRACallback:
+#    lora_alpha: 32
+#    lora_dropout: 0.2
+#    r: 16
+    
+
 #  FreezeSwinLayersCallback:
 #    freeze_epochs: 2
