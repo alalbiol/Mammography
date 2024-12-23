@@ -38,7 +38,7 @@ class DDSMImageClassifier(pl.LightningModule):
         self.num_classes = get_parameter(config, ["LightningModule", "num_classes"], default=2)
         self.optimizer_type = get_parameter(config, ["LightningModule", "optimizer_type"], default="adam")
         self.learning_rate = get_parameter(config, ["LightningModule", "learning_rate"], default=1e-3)
-        self.optimizer_options = get_parameter(config, ["LightningModule", "optimizer_options"], default={})
+        self.optimizer_params = get_parameter(config, ["LightningModule", "optimizer_params"], default={})
         self.lr_scheduler = get_parameter(config, ["LightningModule", "lr_scheduler"], default=None)
         self.lr_scheduler_options = get_parameter(config, ["LightningModule", "lr_scheduler_options"], default={})
         self.loss_name = get_parameter(config, ["LightningModule", "loss_name"], default="cross_entropy")
@@ -56,7 +56,7 @@ class DDSMImageClassifier(pl.LightningModule):
             'num_classes': self.num_classes,
             'optimizer': self.optimizer_type,
             'learning_rate': self.learning_rate,
-            'optimizer_options': self.optimizer_options,
+            'optimizer_params': self.optimizer_params,
             'lr_scheduler': self.lr_scheduler,
             'lr_scheduler_options': self.lr_scheduler_options,
             'loss_name': self.loss_name,
@@ -86,9 +86,11 @@ class DDSMImageClassifier(pl.LightningModule):
         
     def configure_optimizers(self): # called by the trainer
         if self.optimizer_type.lower() == "adam":
-            optimizer =  torch.optim.Adam(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
+            optimizer =  torch.optim.Adam(self.parameters(), lr=self.learning_rate, **self.optimizer_params)
         elif self.optimizer_type.lower() == "sgd":
-            optimizer =  torch.optim.SGD(self.parameters(), lr=self.learning_rate, **self.optimizer_options)
+            optimizer =  torch.optim.SGD(self.parameters(), lr=self.learning_rate, **self.optimizer_params)
+        elif self.optimizer_type.lower() == "adamw":
+            optimizer =  torch.optim.AdamW(self.parameters(), lr=self.learning_rate, **self.optimizer_params)
         else:
             raise NotImplementedError(f"Unknown optimizer {self.optimizer}")
         
@@ -123,12 +125,12 @@ class DDSMImageClassifier(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x = batch[0]
         y = batch[1]
-        
                 
-               #check if mixup is enabled
-        if  self.mixup_alpha > 0:
-            x, y_a, y_b, lam = mixup_data(x, y, self.mixup_alpha)
-            y = y_a if lam > 0.5 else y_b
+        #check if mixup is enabled
+        if  isinstance(y, list): # mixup is enabled
+            y_a, y_b, lam = y
+            
+            y = torch.where(lam > 0.5, y_a, y_b)
             logits = self(x)
             loss = lam * self.loss_fn(logits, y_a) + (1 - lam) * self.loss_fn(logits, y_b)
         else:        
@@ -279,31 +281,31 @@ class DDSMImageClassifier(pl.LightningModule):
         cancer_prob_image = val_df.groupby('image_id')['cancer_prob'].mean().values
         cancer_label_image = val_df.groupby('image_id')['cancer_label'].first().values
         
-        cancer_prob_breast = val_df.groupby('breast_id')['cancer_prob'].mean().values
-        cancer_label_breast = val_df.groupby('breast_id')['cancer_label'].first().values
+        #cancer_prob_breast = val_df.groupby('breast_id')['cancer_prob'].mean().values
+        #cancer_label_breast = val_df.groupby('breast_id')['cancer_label'].first().values
         
         # Compute AUROC and PRROC
         auroc_image = roc_auc_score(cancer_label_image, cancer_prob_image)
-        auroc_breast = roc_auc_score(cancer_label_breast, cancer_prob_breast)
+        #auroc_breast = roc_auc_score(cancer_label_breast, cancer_prob_breast)
         
-        precision, recall, _ = precision_recall_curve(cancer_label_breast, cancer_prob_breast)
-        prroc_breast = average_precision_score(cancer_label_breast, cancer_prob_breast)
+        #precision, recall, _ = precision_recall_curve(cancer_label_breast, cancer_prob_breast)
+        #prroc_breast = average_precision_score(cancer_label_breast, cancer_prob_breast)
         
         # Log AUROC and PRROC
         self.log("val_auroc", auroc_image, prog_bar=True)
-        self.log("val_auroc_breast", auroc_breast, prog_bar=True)
+        #self.log("val_auroc_breast", auroc_breast, prog_bar=True)
 
-        self.log("val_prroc", prroc_breast, prog_bar=True)
+        #self.log("val_prroc", prroc_breast, prog_bar=True)
         
         # Plot and log ROC and PR curves
-        fpr, tpr, _ = roc_curve(cancer_label_image, cancer_prob_image)
-        fig_roc, ax_roc = plot_roc_curve(fpr, tpr)
-        fig_pr, ax_pr = plot_pr_curve(precision, recall)
+        # fpr, tpr, _ = roc_curve(cancer_label_image, cancer_prob_image)
+        # fig_roc, ax_roc = plot_roc_curve(fpr, tpr)
+        # fig_pr, ax_pr = plot_pr_curve(precision, recall)
         
-        if isinstance(self.trainer.logger, WandbLogger):
-            experiment = self.logger.experiment
-            experiment.log({"val ROC curve": wandb.Image(fig2img(fig_roc))})
-            experiment.log({"val PR curve": wandb.Image(fig2img(fig_pr))})
+        # if isinstance(self.trainer.logger, WandbLogger):
+        #     experiment = self.logger.experiment
+        #     experiment.log({"val ROC curve": wandb.Image(fig2img(fig_roc))})
+        #     experiment.log({"val PR curve": wandb.Image(fig2img(fig_pr))})
             
    
     def on_test_epoch_end(self):

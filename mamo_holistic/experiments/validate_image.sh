@@ -24,4 +24,4 @@ echo "Current working directory: $(pwd)"
 
 # Run the experiments for the Nikulin dataset with different sizes of patches.
 #enable Mammo conda environment
-python train/train_image.py --task validate --config config_files/base_config_image.yaml 
+python train/train_image.py --task validate --config config_files/base_config_image_swin.yaml 

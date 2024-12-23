@@ -23,31 +23,30 @@ echo "Current working directory: $(pwd)"
 
 #run experiments for resnet18, resnet34, resnet50 with 224x224 patches
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_base_patch4_window7_224.yaml
+# python train/train_image.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_variants/swin_base_patch4_window7_224.yaml
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_s3_base_224.yaml
+# python train/train_image.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_variants/swin_s3_base_224.yaml
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_s2_small_224.yaml
+# python train/train_image.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_variants/swin_s2_small_224.yaml
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_s2_tiny_224.yaml
+# python train/train_image.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_variants/swin_s2_tiny_224.yaml
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_tiny_patch4_window7_224.yaml
+# python train/train_image.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_variants/swin_tiny_patch4_window7_224.yaml
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_cr_small_224.yaml
+# python train/train_image.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_variants/swin_cr_small_224.yaml
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_cr_small_ns_224
+# python train/train_image.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_variants/swin_cr_small_ns_224
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_cr_tiny_224.yaml
+# python train/train_image.py --config config_files/swin/swin_224.yaml    \
+#             --overrides  config_files/swin/swin_variants/swin_cr_tiny_224.yaml
 
-python train/train_image.py --config config_files/swin/swin_224.yaml    \
-            --overrides  config_files/swin/swin_variants/swin_cr_tiny_ns_224.yaml
+python train/train_image.py --config config_files/base_config_image_swin.yaml
 
 

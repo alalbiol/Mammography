@@ -151,45 +151,29 @@ class DDSMPatchClassifier(pl.LightningModule):
         if  self.mixup_alpha > 0:
             x, y_a, y_b, lam = mixup_data(x, y, self.mixup_alpha)
             y = y_a if lam > 0.5 else y_b
+            
+            y_a_cancer = (y_a > 2).long()
+            y_b_cancer = (y_b > 2).long()
             logits = self(x)
-            loss = lam * self.loss_fn(logits, y_a) + (1 - lam) * self.loss_fn(logits, y_b)
+            abn_logits = logits[:,:5]
+            cancer_logits = logits[:,5:]
+            loss_abn = lam * self.loss_fn(abn_logits, y_a) + (1 - lam) * self.loss_fn(abn_logits, y_b)
+            loss_cancer = lam * self.loss_fn(cancer_logits, y_a_cancer) + (1 - lam) * self.loss_fn(cancer_logits, y_b_cancer)
+            loss = loss_abn + loss_cancer
         else:        
             logits = self(x)
-            loss = self.loss_fn(logits, y)
+            abn_logits = logits[:,:5]
+            cancer_logits = logits[:,5:]
+            loss_abn = self.loss_fn(abn_logits, y)
+            y_cancer = (y > 2).long()
+            loss_cancer = self.loss_fn(cancer_logits, y_cancer)
+            loss = loss_abn + loss_cancer
         
-        preds = torch.argmax(logits, dim=1)
-                
-        acc = self.train_accuracy(preds, y)
-        
-        # if self.n_hard_mining > 0:
-        #     #split logits into two parts. First those with y==0 and second those with y!=0
-        #     #sort the first part and take the first n_hard_mining acorrding to the logit value
-        #     logits_bg = logits[y==0]
-        #     logits_fg = logits[y!=0]
-        #     y_bg = y[y==0]
-        #     y_fg = y[y!=0]
-            
-        #     # Get the top k values and their indices from the first column
-        #     top_k_values, top_k_indices = torch.topk(logits_bg[:, 0], self.n_hard_mining)
-
-        #     # Select the top k rows
-        #     top_logits_bg = logits_bg[top_k_indices]
-        #     top_labels_bg = y_bg[top_k_indices]
-            
-        #     logits = torch.cat((top_logits_bg, logits_fg), dim=0)
-        #     y = torch.cat((top_labels_bg, y_fg), dim=0)
-            
-        
-        preds = torch.argmax(logits, dim=1)
-        self.train_confusion_matrix(preds, y)
-        
-        self.log("train_acc", acc, prog_bar=True)       
+                    
         self.log("train_loss", loss, prog_bar=False)
-        
-        probs = F.softmax(logits, dim=1)
-        
+                
         # Store outputs and targets for AUROC and PRROC calculation
-        self.train_outputs = torch.cat((self.train_outputs, probs.detach().cpu()), dim=0)
+        self.train_outputs = torch.cat((self.train_outputs, logits.detach().cpu()), dim=0)
         self.train_targets = torch.cat((self.train_targets, y.detach().cpu()), dim=0)
     
         return loss
@@ -204,33 +188,39 @@ class DDSMPatchClassifier(pl.LightningModule):
         #mask = batch[2]
         
         logits = self(x)
-        loss = self.loss_fn(logits, y)
         
-        preds = torch.argmax(logits, dim=1)
+        abn_logits = logits[:,:5]
+        cancer_logits = logits[:,5:]
         
-        self.val_confusion_matrix(preds, y)
+        loss_abn = self.loss_fn(abn_logits, y)
+        y_cancer = (y > 2).long()
+        loss_cancer = self.loss_fn(cancer_logits, y_cancer)
+        
+        loss = loss_abn + loss_cancer
+        
+        #preds = torch.argmax(logits, dim=1)
+        
+        #self.val_confusion_matrix(preds, y)
 
         # Update confusion matrix components
-        for i in range(self.num_classes):
-            self.tp[i] += torch.sum((preds == i) & (y == i)).item()  # True positives
-            self.fp[i] += torch.sum((preds == i) & (y != i)).item()  # False positives
-            self.fn[i] += torch.sum((preds != i) & (y == i)).item()  # False negatives
-            self.total[i] += torch.sum(y == i).item()  # Total instances of class i
+        # for i in range(self.num_classes):
+        #     self.tp[i] += torch.sum((preds == i) & (y == i)).item()  # True positives
+        #     self.fp[i] += torch.sum((preds == i) & (y != i)).item()  # False positives
+        #     self.fn[i] += torch.sum((preds != i) & (y == i)).item()  # False negatives
+        #     self.total[i] += torch.sum(y == i).item()  # Total instances of class i
 
-        # Log the loss (optional)
+        # # Log the loss (optional)
         #self.log("val/loss", loss, prog_bar=False)
         
         
-        acc = (preds == y).float().mean() # global accuracy
+        #acc = (preds == y).float().mean() # global accuracy
         self.log("val_loss", loss, prog_bar=False)
-        self.log("val_acc", acc, prog_bar=False)
-        
-        probs = F.softmax(logits, dim=1)
+        #self.log("val_acc", acc, prog_bar=False)
         
         # Store outputs and targets for AUROC and PRROC calculation
-        self.val_outputs = torch.cat((self.val_outputs, probs.detach().cpu()), dim=0)
+        self.val_outputs = torch.cat((self.val_outputs, logits.detach().cpu()), dim=0)
         self.val_targets = torch.cat((self.val_targets, y.detach().cpu()), dim=0) 
-                  
+        
         return loss
     
     # def test_step(self, batch, batch_idx):
@@ -245,24 +235,23 @@ class DDSMPatchClassifier(pl.LightningModule):
     # compute training metrics at the end of training epoch
     def on_train_epoch_end(self):
         super().on_train_epoch_end()
-        self.train_confusion_matrix.compute()
-        fig, ax = self.train_confusion_matrix.plot()
+        # self.train_confusion_matrix.compute()
+        # fig, ax = self.train_confusion_matrix.plot()
         
         if isinstance(self.trainer.logger,WandbLogger):                
             experiment = self.logger.experiment
-            experiment.log({"train/train confusion_matrix": wandb.Image(fig2img(fig))})
-        self.train_confusion_matrix.reset()
+        #     experiment.log({"train/train confusion_matrix": wandb.Image(fig2img(fig))})
+        # self.train_confusion_matrix.reset()
         
-        self.log("train/train_acc_epoch", self.train_accuracy.compute(), prog_bar=False)
-        self.train_accuracy.reset()
+        # self.log("train/train_acc_epoch", self.train_accuracy.compute(), prog_bar=False)
+        # self.train_accuracy.reset()
         
            # Calculate cancer probability
-        if self.num_classes == 5:
-            cancer_prob = self.train_outputs[:, 3] + self.train_outputs[:, 4]
-            cancer_label = (self.train_targets > 2).long()
-        else: # binary labels
-            cancer_prob = self.train_outputs[:, 1]
-            cancer_label = self.train_targets
+        logits = self.train_outputs[:,:5]       
+        probs = F.softmax(logits, dim=1).numpy()
+        
+        cancer_prob = probs[:, 3] + probs[:, 4]
+        cancer_label = (self.train_targets > 2).long()
         
         # Compute AUROC and PRROC
         auroc = roc_auc_score(cancer_label, cancer_prob)
@@ -272,6 +261,13 @@ class DDSMPatchClassifier(pl.LightningModule):
         # Log AUROC and PRROC
         self.log("train_auroc", auroc, prog_bar=True)
         self.log("train_prroc", prroc, prog_bar=False)
+        
+        cancer_logits = self.train_outputs[:,5:]
+        cancer_probs = F.softmax(cancer_logits, dim=1).numpy()
+        
+        auroc = roc_auc_score(cancer_label, cancer_probs[:, 1])
+        self.log("train_auroc_cancer", auroc, prog_bar=False)
+        
         
         # Plot and log ROC and PR curves
         fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)
@@ -291,7 +287,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         f1_per_class = 2 * (precision_per_class * recall_per_class) / (precision_per_class + recall_per_class + 1e-10)
 
         # Log per-class metrics at epoch end
-        for i in range(1,self.num_classes):
+        for i in range(1,5):
             class_name = self.idx_to_class[i]
             self.log(f"val/precision_class_{class_name}", precision_per_class[i], prog_bar=False)
             self.log(f"val/recall_class_{class_name}", recall_per_class[i], prog_bar=False)
@@ -321,12 +317,12 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         
            # Calculate cancer probability
-        if self.num_classes == 5:
-            cancer_prob = self.val_outputs[:, 3] + self.val_outputs[:, 4]
-            cancer_label = (self.val_targets > 2).long()
-        else: # binary labels
-            cancer_prob = self.val_outputs[:, 1]
-            cancer_label = self.val_targets
+        logits = self.val_outputs[:,:5]
+        probs = F.softmax(logits, dim=1).numpy()
+        
+        cancer_prob = probs[:, 3] + probs[:, 4]
+        cancer_label = (self.val_targets > 2).long()
+ 
         
         # for the first epoch, skip if all labels are the same
         if cancer_label.sum() == 0 or cancer_label.sum() == len(cancer_label): # Skip if all labels are the same
@@ -340,6 +336,11 @@ class DDSMPatchClassifier(pl.LightningModule):
         # Log AUROC and PRROC
         self.log("val_auroc", auroc, prog_bar=True)
         self.log("val_prroc", prroc, prog_bar=False)
+        
+        cancer_logits = self.val_outputs[:,5:]
+        cancer_probs = F.softmax(cancer_logits, dim=1).numpy()
+        auroc = roc_auc_score(cancer_label, cancer_probs[:, 1])
+        self.log("val_auroc_cancer", auroc, prog_bar=False)
         
         # Plot and log ROC and PR curves
         fpr, tpr, _ = roc_curve(cancer_label, cancer_prob)

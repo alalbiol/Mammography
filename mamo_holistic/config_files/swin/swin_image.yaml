@@ -17,6 +17,7 @@ Datamodule:
   dream_pilot_folder: /home/alalbiol/Data/mamo/dream_pilot_png_832x1152
   #subset_size_train: 1000
   #subset_size_test: 100
+  mixup_alpha: 0.3
 
 
 Logger:
