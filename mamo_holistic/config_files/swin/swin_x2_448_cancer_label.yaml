@@ -24,12 +24,12 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_patch
-  name: swin-base-patch4-window7-224-in22k_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5
+  name: swin_base_patch4_window7_224_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5_multilabel
   save_dir: /tmp/logs/ddsm_patch_448_swin
 
 LightningModule:
-  #model_name: swin_base_patch4_window7_224
-  model_name: swin_base_patch4_window7_224.ms_in22k_ft_in1k
+  #model_name: swin_base_patch4_window7_224.ms_in22k_ft_in1k
+  model_name: swin_base_patch4_window7_224
   #model_name: swin_large_patch4_window7_224.ms_in22k
   model_params:
     pretrained: True
@@ -45,7 +45,7 @@ LightningModule:
   optimizer_type: adamw
   optimizer_params:
     weight_decay: 0.2
-  num_classes: 5
+  num_classes: 7
   #lr_scheduler: ReduceLROnPlateau
   # lr_scheduler_options:
   #   mode: max
@@ -89,7 +89,7 @@ Callbacks:
     monitor: val_auroc
     mode: max
     save_top_k: 3
-    dirpath: /tmp/checkpoints/swin-base-patch4-window7-224-in22k_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5
+    dirpath: /tmp/checkpoints/swin_large_x2_224_multilabel_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5
     filename: swin_base_x2_224_CE_{epoch}-{step}-{val_auroc:.3f}
     verbose: True
   #EMACallback:
