@@ -1065,11 +1065,15 @@ class DDSM_Image_Dataset(Dataset):
                 # las anomalias estn en el otro pecho
                 # las quitamos de momento porque tenemos muchas mas normales
                 # y las benignas tambien no son cancer
-                
                 imagenes_sin_anot += 1
+                anot['image_id'] = image_id
+                anot['mask_id'] = None
+                anot['breast_malignant'] = False
+                annotations_final.append(anot)
+                
             
             
-        print("Number of images after assgining labels: ", len(annotations_final), " Images without annotations: ", imagenes_sin_anot)
+        print("Number of images after assgining labels: ", len(annotations_final), " Images without annotations (other breasts in cancer/bening folders): ", imagenes_sin_anot)
         
         return pd.DataFrame(annotations_final)
 
@@ -1182,6 +1186,46 @@ class DDSM_Image_Dataset(Dataset):
     
 
 
+class DDSM_Image_Dataset_mixup(DDSM_Image_Dataset):
+    def __init__(self, split_csv, ddsm_annotations, root_dir, 
+            convert_to_rgb = True,
+            return_mask=False,
+            subset_size = None, 
+            random_seed = 42,
+            num_normal_images_test = 700,
+            geometrical_transform = None,
+            intensity_transform = None,
+            mixup_alpha = 0.4):
+        
+        super().__init__(split_csv, ddsm_annotations, root_dir,
+            convert_to_rgb = convert_to_rgb,
+            return_mask=return_mask,
+            subset_size = subset_size,
+            random_seed = random_seed,
+            num_normal_images_test = num_normal_images_test,
+            geometrical_transform = geometrical_transform,
+            intensity_transform = intensity_transform)
+        
+        self.mixup_alpha = mixup_alpha
+        
+    
+    def __getitem__(self, idx):
+        image, label1, mask, image_id = super().__getitem__(idx)
+                
+        # mixup
+        idx2 = np.random.randint(self.__len__())
+        image2, label2, mask2, image_id2 = super().__getitem__(idx2)
+        
+        lam = np.random.beta(self.mixup_alpha, self.mixup_alpha)
+        image = lam * image + (1 - lam) * image2
+        if mask is not None:
+            mask = lam * mask + (1 - lam) * mask2
+            
+        label = (label1, label2, lam)
+            
+        return image, label, mask, image_id
+    
+
 class DreamPilot_Image_Dataset(Dataset):
     def __init__(self, dream_pilot_folder, transform = None):
         self.dream_pilot_folder = pathlib.Path(dream_pilot_folder)
@@ -1225,6 +1269,7 @@ class DDSMImageDataModule(pl.LightningDataModule):
         self.batch_size = get_parameter(config, ['Datamodule', 'batch_size'])
         self.balanced_patches = get_parameter(config, ['Datamodule', 'balanced_patches'], default=False)
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
+        self.mixup_alpha = get_parameter(config, ['Datamodule', 'mixup_alpha'], default=None) # use mixup dataset for training
         
         self.train_csv = self.source_root / self.train_csv if self.source_root is not None else self.train_csv
         self.val_csv = self.source_root / self.val_csv if self.source_root is not None else self.val_csv
@@ -1280,13 +1325,21 @@ class DDSMImageDataModule(pl.LightningDataModule):
 
     
 
-        
-        dataset = DDSM_Image_Dataset(self.train_csv, self.ddsm_annotations, self.ddsm_root, 
-                                    convert_to_rgb=False, 
-                                    subset_size=self.subset_size_train, random_seed=self.random_seed,
-                                    geometrical_transform=geometrical_transform,
-                                    intensity_transform=intensity_transform,
-                                    return_mask=self.return_mask)  
+        if self.mixup_alpha is None:
+            dataset = DDSM_Image_Dataset(self.train_csv, self.ddsm_annotations, self.ddsm_root, 
+                                        convert_to_rgb=False, 
+                                        subset_size=self.subset_size_train, random_seed=self.random_seed,
+                                        geometrical_transform=geometrical_transform,
+                                        intensity_transform=intensity_transform,
+                                        return_mask=self.return_mask)  
+        else:
+            dataset = DDSM_Image_Dataset_mixup(self.train_csv, self.ddsm_annotations, self.ddsm_root, 
+                                        convert_to_rgb=False, 
+                                        subset_size=self.subset_size_train, random_seed=self.random_seed,
+                                        geometrical_transform=geometrical_transform,
+                                        intensity_transform=intensity_transform,
+                                        return_mask=self.return_mask,
+                                        mixup_alpha=self.mixup_alpha)
         
         if self.balanced_patches:
             print("Using balanced batch sampler")
