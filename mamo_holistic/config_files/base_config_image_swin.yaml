@@ -23,20 +23,26 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_image
-  name: SwinBreastCancerAttention_lr_1e-5_LoRAallr32_wd0.2_mixup_0.2_all_images
+  name: SwinBreastCancerAttention_RelevantTokenAtt_lr_1e-4_LoRA_qkvr128_wd0.2_mixup_0.2_all_images_tds
   save_dir: /tmp/logs/SwinBreastCancerAttention
 
 LightningModule:
   model_name: SwinBreastCancer
   model_params:
     swin_model_name: swin_base_patch4_window7_224
-    patch_checkpoint: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/swin_base_x2_224_multilabel_CE_epoch=22-step=4025-val_auroc=0.919.ckpt
-    #patch_checkpoint: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/swin_base_x2_224_multilabel_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5/swin_base_x2_224_CE_epoch=23-step=4200-val_auroc=0.927.ckpt
+    # 7 clases
+    #patch_checkpoint: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/swin_base_x2_224_multilabel_CE_epoch=22-step=4025-val_auroc=0.919.ckpt
+    
+    # 6 clases
+    patch_checkpoint: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/swin_base_x2_224_cancerlabel_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5/swin_base_x2_224_CE_epoch=28-step=5075-val_auroc=0.924.ckpt
+    
+    patch_fusion: RelevantTokenAttention
     LoRA:
-     r: 32
+     r: 128
      lora_alpha: 32
      lora_dropout: 0.2
-     target_modules: ["qkv", "fc1", "fc2", "proj"]
+     target_modules: ['qkv']
+     #target_modules: ["qkv", "fc1", "fc2", "proj"]
     #   #warmup_epochs: 5
       #warmup_lr: 1.e-6
       #min_lr: 1.e-8

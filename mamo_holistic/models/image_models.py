@@ -60,35 +60,106 @@ import torch.distributions as dist
 class RelevantTokenSelector(nn.Module):
     def __init__(self, embedding_dim, num_classes):
         super().__init__()
-        self.scorer = nn.Linear(embedding_dim, 2)  # Scoring relevance for each token
+        self.scorer = nn.Linear(embedding_dim, 1)  # Scoring relevance for each token
         
     def init_scorer_from_patchmodel(self, patch_model):
-        weights = patch_model[1].head.fc[1].weight[5:,:].data.cpu()
+        weights = patch_model[1].head.fc[1].weight[5:,:].data.cpu().reshape(1,-1)
         bias = patch_model[1].head.fc[1].bias[5:].data.cpu()
+        
         self.scorer.weight.data = weights
         self.scorer.bias.data = bias
 
     def forward(self, token_embeddings):
         # Compute relevance scores (shape: batch_size, seq_len, nfeatures)
-        relevance_logits = self.scorer(token_embeddings).squeeze(-1)  # (batch_size, seq_len,2)
-        relevance_scores = torch.softmax(relevance_logits, dim=-1)  # (batch_size, seq_len,2)
-        relevance_scores = relevance_scores[:,:,1]  # (batch_size, seq_len)
+        relevance_logits = self.scorer(token_embeddings).squeeze(-1)  # (batch_size, seq_len)
         
+
         if self.training:
             # During training, sample tokens based on the relevance scores
-            categorical_dist = dist.Categorical(probs=relevance_scores)  # Create a Categorical distribution
+            categorical_dist = dist.Categorical(logits=relevance_logits)  # Create a Categorical distribution
             
             # Sample token indices (shape: batch_size)
             selected_token_indices = categorical_dist.sample()  # (batch_size,)
         else:
             # During evaluation, select the token with the highest relevance score
-            selected_token_indices = torch.argmax(relevance_scores, dim=-1)        
+            selected_token_indices = torch.argmax(relevance_logits, dim=-1)        
         
         # Gather the embeddings of the selected tokens
         selected_token_embeddings = token_embeddings[torch.arange(token_embeddings.size(0)), selected_token_indices]  # (batch_size, embedding_dim) 
         
         return selected_token_embeddings, selected_token_indices
  
+
+import numpy as np
+class RelevantTokenAttention(nn.Module):
+    def __init__(self, window_size_x, window_size_y, qv_dim = 256, token_dim = 1024):
+        super().__init__()
+        self.create_positional_biases(window_size_x, window_size_y)
+        self.token_selector = RelevantTokenSelector(token_dim, window_size_x*window_size_y)
+        self.kv = nn.Linear(token_dim, qv_dim)
+        self.layer_norm = nn.LayerNorm(token_dim)
+        self.create_positional_biases(window_size_x, window_size_y)
+        self.norm_attention = np.sqrt(qv_dim)
+        self.fc_final = torch.nn.Linear(token_dim, 2)
+        
+    def create_positional_biases(self, window_size_x, window_size_y):
+        mesh = np.meshgrid(range(window_size_x), range(window_size_y))
+
+        indices = np.array([np.array([x,y]) for x,y in zip(mesh[0].flatten(), mesh[1].flatten())])
+
+        pos_dict = {}
+        relative_positions = indices[np.newaxis,:] - indices[:,np.newaxis]
+        relative_indexes = []
+        #print(relative_positions.shape)
+        for pos in (relative_positions.reshape(-1,2)):
+            pos = (pos[0], pos[1])
+
+            if not pos in pos_dict:
+                pos_dict[pos] = len(pos_dict)
+            
+            relative_indexes.append(pos_dict[pos])
+                
+        relative_indexes = np.array(relative_indexes).reshape(window_size_y*window_size_x, window_size_y*window_size_x)
+        #print(relative_indexes)   
+        self.register_buffer('relative_indexes', torch.tensor(relative_indexes, dtype=torch.long))
+        self.unique_bias_param = nn.Parameter(torch.zeros(len(pos_dict), dtype=torch.float))
+        
+    def init_scorer_from_patchmodel(self, patch_model):
+        print("Token selector init scorer intializing")
+        self.token_selector.init_scorer_from_patchmodel(patch_model)
+
+  
+    def forward(self, x):
+        # x B x N x token_dim        
+        if len(x.shape) == 4: # B x H x W x token_dim 
+            x = x.reshape(x.shape[0], -1, x.shape[-1]) # B x N x token_dim
+        
+        selected_token, selected_idx = self.token_selector(x) # B x token_dim, B 
+        
+        xnorm = self.layer_norm(x)
+        
+        key = self.kv(xnorm) # B x N x qv_dim
+        query = self.kv(self.layer_norm(selected_token)) # B x  qv_dim
+        
+        attn = torch.einsum('bd,bnd->bn', query, key) / self.norm_attention   # B x N
+        
+        self.bias_param = self.unique_bias_param[self.relative_indexes]
+        bias = self.bias_param[ selected_idx, :] # B x N
+        
+        attn = attn + bias
+        
+        attn = torch.softmax(attn, dim=-1)
+        y = torch.einsum('bn,bnd->bd', attn, xnorm) # B x token_dim
+    
+        y = y + selected_token
+        
+        y = self.fc_final(y)
+        
+        
+        
+        return y
+
+
 
 
 class SwinBreastCancer(torch.nn.Module):
@@ -98,7 +169,7 @@ class SwinBreastCancer(torch.nn.Module):
         swin_model_name = kwargs.get("swin_model_name", "swin_base_patch4_window7_224")
         swin = timm.create_model(swin_model_name, pretrained=False)
         swin.head.fc = nn.Sequential(nn.Dropout(0.5),
-                                    nn.Linear(swin.head.fc.in_features, 7))
+                                    nn.Linear(swin.head.fc.in_features, 6))
         
         self.patch_model = nn.Sequential(
             Gray2RGBadaptor(), 
@@ -118,6 +189,12 @@ class SwinBreastCancer(torch.nn.Module):
         if kwargs.get("patch_fusion", "PatchFusionAttention") == "PatchFusionAttention":
             self.fusion = PatchFusionAttention(self.patch_model[1].head.fc[1].in_features)
             self.fusion.init_from_patchmodel(self.patch_model)
+        elif kwargs.get("patch_fusion", "PatchFusionAttention") == "RelevantTokenAttention":
+            print("Using RelevantTokenAttention")
+            window_size_x = kwargs.get("window_size_x", 4)
+            window_size_y = kwargs.get("window_size_y", 5)
+            self.fusion = RelevantTokenAttention(window_size_x, window_size_y, qv_dim = 256, token_dim = self.patch_model[1].head.fc[1].in_features)
+            self.fusion.init_scorer_from_patchmodel(self.patch_model)
         
         #self.freeze_patch_model()
         if kwargs.get("LoRA", False):
@@ -129,7 +206,6 @@ class SwinBreastCancer(torch.nn.Module):
         
         
     def set_LoRA(self, **kwargs):
-                   
             from peft import get_peft_model, LoraConfig, TaskType
             task_type=TaskType.FEATURE_EXTRACTION
             print("Using LoRA")
