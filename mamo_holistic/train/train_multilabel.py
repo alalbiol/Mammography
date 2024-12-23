@@ -75,6 +75,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         
         self.loss_fn = get_loss(self.loss_name, **self.loss_params)
         
+        self.loss_fn_binary = nn.BCEWithLogitsLoss() # Binary cross entropy loss for cancer classification
+        
         # Metrics initialization
         self.train_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
         self.val_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=self.num_classes, average='macro')
@@ -145,20 +147,21 @@ class DDSMPatchClassifier(pl.LightningModule):
         x = batch[0]
         y = batch[1]
         #mask = batch[2]
-
+        
+        
     
         #check if mixup is enabled
         if  self.mixup_alpha > 0:
             x, y_a, y_b, lam = mixup_data(x, y, self.mixup_alpha)
             y = y_a if lam > 0.5 else y_b
             
-            y_a_cancer = (y_a > 2).long()
-            y_b_cancer = (y_b > 2).long()
+            y_a_cancer = (y_a > 2).float()
+            y_b_cancer = (y_b > 2).float()
             logits = self(x)
             abn_logits = logits[:,:5]
-            cancer_logits = logits[:,5:]
+            cancer_logits = logits[:,5]
             loss_abn = lam * self.loss_fn(abn_logits, y_a) + (1 - lam) * self.loss_fn(abn_logits, y_b)
-            loss_cancer = lam * self.loss_fn(cancer_logits, y_a_cancer) + (1 - lam) * self.loss_fn(cancer_logits, y_b_cancer)
+            loss_cancer = lam * self.loss_fn_binary(cancer_logits, y_a_cancer) + (1 - lam) * self.loss_fn_binary(cancer_logits, y_b_cancer)
             loss = loss_abn + loss_cancer
         else:        
             logits = self(x)
@@ -190,11 +193,11 @@ class DDSMPatchClassifier(pl.LightningModule):
         logits = self(x)
         
         abn_logits = logits[:,:5]
-        cancer_logits = logits[:,5:]
+        cancer_logits = logits[:,5]
         
         loss_abn = self.loss_fn(abn_logits, y)
-        y_cancer = (y > 2).long()
-        loss_cancer = self.loss_fn(cancer_logits, y_cancer)
+        y_cancer = (y > 2).float()
+        loss_cancer = self.loss_fn_binary(cancer_logits, y_cancer)
         
         loss = loss_abn + loss_cancer
         
@@ -262,10 +265,10 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.log("train_auroc", auroc, prog_bar=True)
         self.log("train_prroc", prroc, prog_bar=False)
         
-        cancer_logits = self.train_outputs[:,5:]
-        cancer_probs = F.softmax(cancer_logits, dim=1).numpy()
+        cancer_logits = self.train_outputs[:,5]
+        cancer_probs = F.sigmoid(cancer_logits).numpy()
         
-        auroc = roc_auc_score(cancer_label, cancer_probs[:, 1])
+        auroc = roc_auc_score(cancer_label, cancer_probs)
         self.log("train_auroc_cancer", auroc, prog_bar=False)
         
         
@@ -337,9 +340,9 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.log("val_auroc", auroc, prog_bar=True)
         self.log("val_prroc", prroc, prog_bar=False)
         
-        cancer_logits = self.val_outputs[:,5:]
-        cancer_probs = F.softmax(cancer_logits, dim=1).numpy()
-        auroc = roc_auc_score(cancer_label, cancer_probs[:, 1])
+        cancer_logits = self.val_outputs[:,5]
+        cancer_probs = F.sigmoid(cancer_logits).numpy()
+        auroc = roc_auc_score(cancer_label, cancer_probs)
         self.log("val_auroc_cancer", auroc, prog_bar=False)
         
         # Plot and log ROC and PR curves
