@@ -1030,6 +1030,18 @@ class DDSM_Image_Dataset(Dataset):
             np.array: with the targets of the dataset (per image)
         """
         return self.ddsm_annotations['breast_malignant'].values
+    
+    def sample_equiprobable(self):
+        positive = np.random.rand() > 0.5
+        
+        labels = self.ddsm_annotations['breast_malignant'].values
+            
+        if positive:
+            positive_idx = np.random.choice(np.where(labels == True)[0])
+            return positive_idx
+        else:
+            negative_idx = np.random.choice(np.where(labels == False)[0])
+            return negative_idx
         
 
     def load_annotations(self, split_csv,  annotations_file):
@@ -1213,7 +1225,7 @@ class DDSM_Image_Dataset_mixup(DDSM_Image_Dataset):
         image, label1, mask, image_id = super().__getitem__(idx)
                 
         # mixup
-        idx2 = np.random.randint(self.__len__())
+        idx2 = self.sample_equiprobable()
         image2, label2, mask2, image_id2 = super().__getitem__(idx2)
         
         lam = np.random.beta(self.mixup_alpha, self.mixup_alpha)
