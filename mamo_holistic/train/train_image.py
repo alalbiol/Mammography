@@ -357,6 +357,10 @@ def create_callbacks(config):
         elif callback_name == "EMACallback":
             from utils.callbacks import EMACallback
             callbacks.append(EMACallback(**callbacks_dict[callback_name]))
+        elif callback_name == "ReduceLROnEpochsCallback":
+            from utils.callbacks import ReduceLROnEpochsCallback
+            callbacks.append(ReduceLROnEpochsCallback(**callbacks_dict[callback_name]))
+
 
 
 
