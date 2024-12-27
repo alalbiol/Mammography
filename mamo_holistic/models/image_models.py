@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 
 from models.modules import Gray2RGBadaptor, SEBlock, CBAMImagePooling
 import timm
@@ -92,75 +94,171 @@ class RelevantTokenSelector(nn.Module):
 
 import numpy as np
 class RelevantTokenAttention(nn.Module):
-    def __init__(self, window_size_x, window_size_y, qv_dim = 256, token_dim = 1024):
+    def __init__(self, window_size_x, window_size_y, qkv_dim=256, token_dim=1024):
         super().__init__()
         self.create_positional_biases(window_size_x, window_size_y)
-        self.token_selector = RelevantTokenSelector(token_dim, window_size_x*window_size_y)
-        self.kv = nn.Linear(token_dim, qv_dim)
+
+        self.token_selector = RelevantTokenSelector(token_dim, window_size_x * window_size_y)
+        self.qk = nn.Linear(token_dim, qkv_dim)
+        self.v = nn.Linear(token_dim, qkv_dim)
+        self.skip = nn.Linear(token_dim, qkv_dim)
         self.layer_norm = nn.LayerNorm(token_dim)
-        self.create_positional_biases(window_size_x, window_size_y)
-        self.norm_attention = np.sqrt(qv_dim)
-        self.fc_final = torch.nn.Linear(token_dim, 2)
-        
+        self.norm_attention = torch.sqrt(torch.tensor(qkv_dim, dtype=torch.float32))
+        self.final_dropout = nn.Dropout(0.5)
+        self.fc_final = nn.Linear(qkv_dim, 2)
+
     def create_positional_biases(self, window_size_x, window_size_y):
-        mesh = np.meshgrid(range(window_size_x), range(window_size_y))
+        """
+        Creates positional biases for relative indexing based on the window dimensions.
+        """
+        # Generate grid indices for the window
+        mesh = torch.meshgrid(torch.arange(window_size_x), torch.arange(window_size_y), indexing="ij")
+        indices = torch.stack(mesh, dim=-1).reshape(-1, 2)  # Shape: [window_size_x * window_size_y, 2]
 
-        indices = np.array([np.array([x,y]) for x,y in zip(mesh[0].flatten(), mesh[1].flatten())])
+        # Compute relative positions
+        relative_positions = indices[:, None, :] - indices[None, :, :]  # Shape: [N, N, 2]
+        relative_positions = relative_positions.reshape(-1, 2)  # Flatten to [N^2, 2]
 
-        pos_dict = {}
-        relative_positions = indices[np.newaxis,:] - indices[:,np.newaxis]
-        relative_indexes = []
-        #print(relative_positions.shape)
-        for pos in (relative_positions.reshape(-1,2)):
-            pos = (pos[0], pos[1])
+        # Map unique relative positions to indices
+        unique_positions, inverse_indices = torch.unique(relative_positions, dim=0, return_inverse=True)
+        relative_indexes = inverse_indices.reshape(window_size_x * window_size_y, window_size_x * window_size_y)
 
-            if not pos in pos_dict:
-                pos_dict[pos] = len(pos_dict)
-            
-            relative_indexes.append(pos_dict[pos])
-                
-        relative_indexes = np.array(relative_indexes).reshape(window_size_y*window_size_x, window_size_y*window_size_x)
-        #print(relative_indexes)   
-        self.register_buffer('relative_indexes', torch.tensor(relative_indexes, dtype=torch.long))
-        self.unique_bias_param = nn.Parameter(torch.zeros(len(pos_dict), dtype=torch.float))
-        
+        # Convert to PyTorch tensors
+        self.register_buffer("relative_indexes", relative_indexes)  # Buffer
+        self.unique_bias_param = nn.Parameter(torch.zeros(unique_positions.size(0), dtype=torch.float))
+
     def init_scorer_from_patchmodel(self, patch_model):
-        print("Token selector init scorer intializing")
+        print("Token selector initializing scorer")
         self.token_selector.init_scorer_from_patchmodel(patch_model)
 
-  
     def forward(self, x):
-        # x B x N x token_dim        
-        if len(x.shape) == 4: # B x H x W x token_dim 
-            x = x.reshape(x.shape[0], -1, x.shape[-1]) # B x N x token_dim
+        """
+        Forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (B, N, token_dim) or (B, H, W, token_dim).
+
+        Returns:
+            torch.Tensor: Output tensor of shape (B, 2).
+        """
+        if len(x.shape) == 4:  # If input shape is (B, H, W, token_dim)
+            x = x.reshape(x.shape[0], -1, x.shape[-1])  # Reshape to (B, N, token_dim)
+
+        # Token selection
+        selected_token, selected_idx = self.token_selector(x)  # selected_token: (B, token_dim), selected_idx: (B,)
         
-        selected_token, selected_idx = self.token_selector(x) # B x token_dim, B 
-        
-        xnorm = self.layer_norm(x)
-        
-        key = self.kv(xnorm) # B x N x qv_dim
-        query = self.kv(self.layer_norm(selected_token)) # B x  qv_dim
-        
-        attn = torch.einsum('bd,bnd->bn', query, key) / self.norm_attention   # B x N
-        
-        self.bias_param = self.unique_bias_param[self.relative_indexes]
-        bias = self.bias_param[ selected_idx, :] # B x N
-        
-        attn = attn + bias
-        
-        attn = torch.softmax(attn, dim=-1)
-        y = torch.einsum('bn,bnd->bd', attn, xnorm) # B x token_dim
-    
-        y = y + selected_token
-        
-        y = self.fc_final(y)
-        
-        
-        
+        # Normalize tokens
+        selected_token_norm = self.layer_norm(selected_token)  # (B, token_dim)
+        xnorm = self.layer_norm(x)  # (B, N, token_dim)
+
+        # Compute Q, K, V
+        value = self.v(xnorm)  # (B, N, qkv_dim)
+        key = self.qk(xnorm)  # (B, N, qkv_dim)
+        query = self.qk(selected_token_norm)  # (B, qkv_dim)
+
+        # Transform selected tokens
+        selected_token_transformed = self.skip(selected_token)  # (B, qkv_dim)
+
+        # Attention computation
+        attn = (query @ key.transpose(-2, -1)) / self.norm_attention  # (B, N)
+
+        # Apply positional bias
+        bias = self.unique_bias_param[self.relative_indexes[selected_idx]]  # (B, N)
+
+        # Compute final attention weights
+        attn = F.softmax(attn + bias, dim=-1)  # (B, N)
+
+        # Weighted sum and final output
+        y = (attn @ value) + selected_token_transformed  # (B, qkv_dim)
+        y = F.relu(y)
+        y = self.final_dropout(y) 
+        y = self.fc_final(y).squeeze(1)  # Ensure shape is (B, 2)
+
         return y
 
+class MultiHeadRelevantTokenAttention(nn.Module):
+    def __init__(self, window_size_x, window_size_y, qkv_dim=256, token_dim=1024, num_heads=4, top_k=None):
+        super().__init__()
+        assert qkv_dim % num_heads == 0, "qkv_dim must be divisible by num_heads"
+        self.num_heads = num_heads
+        self.head_dim = qkv_dim // num_heads
+        self.top_k = top_k
+        self.create_positional_biases(window_size_x, window_size_y)
 
+        self.token_selector = RelevantTokenSelector(token_dim, window_size_x * window_size_y)
+        self.qk = nn.Linear(token_dim, qkv_dim)
+        self.v = nn.Linear(token_dim, qkv_dim)
+        self.skip = nn.Linear(token_dim, qkv_dim)
+        self.layer_norm = nn.LayerNorm(token_dim)
+        self.norm_attention = self.head_dim ** 0.5
+        self.final_dropout = nn.Dropout(0.5)
+        self.fc_final = nn.Linear(qkv_dim, 2)
+        self.out_proj = nn.Linear(qkv_dim, qkv_dim)
 
+    def create_positional_biases(self, window_size_x, window_size_y):
+        # Generate grid indices for the window
+        mesh = np.meshgrid(range(window_size_x), range(window_size_y), indexing="ij")
+        indices = np.stack(mesh, axis=-1).reshape(-1, 2)  # Shape: [window_size_x * window_size_y, 2]
+
+        # Compute relative positions
+        relative_positions = indices[:, None, :] - indices[None, :, :]  # Shape: [N, N, 2]
+        relative_positions = relative_positions.reshape(-1, 2)  # Flatten to [N^2, 2]
+
+        # Map unique relative positions to indices
+        pos_dict = {tuple(pos): idx for idx, pos in enumerate(np.unique(relative_positions, axis=0))}
+        relative_indexes = np.array([pos_dict[tuple(pos)] for pos in relative_positions])
+        relative_indexes = relative_indexes.reshape(window_size_x * window_size_y, window_size_x * window_size_y)
+
+        # Convert to PyTorch tensors
+        relative_indexes_tensor = torch.tensor(relative_indexes, dtype=torch.long)
+        unique_bias_param_tensor = nn.Parameter(torch.zeros(len(pos_dict), dtype=torch.float))
+
+        # Register as buffers and parameters
+        self.register_buffer("relative_indexes", relative_indexes_tensor)  # Buffer
+        self.unique_bias_param = unique_bias_param_tensor  # Parameter
+
+    def init_scorer_from_patchmodel(self, patch_model):
+        print("Token selector init scorer initializing")
+        self.token_selector.init_scorer_from_patchmodel(patch_model)
+
+    def forward(self, x):
+        # Input shape: (B, H, W, token_dim) or (B, N, token_dim)
+        B, *dims, token_dim = x.shape
+        if len(dims) == 2:  # If H and W are present
+            x = x.view(B, -1, token_dim)  # Reshape to (B, N, token_dim)
+
+        selected_token, selected_idx = self.token_selector(x)  # Shape: (B, token_dim), (B, N)
+        x_norm, selected_token_norm = self.layer_norm(x), self.layer_norm(selected_token)
+
+        value = self.v(x_norm).view(B, -1, self.num_heads, self.head_dim).transpose(1, 2)  # (B, num_heads, N, head_dim)
+        key = self.qk(x_norm).view(B, -1, self.num_heads, self.head_dim).transpose(1, 2)  # (B, num_heads, N, head_dim)
+        query = self.qk(selected_token_norm).view(B, self.num_heads, self.head_dim).unsqueeze(2)  # (B, num_heads, 1, head_dim)
+
+        selected_token_transformed = self.skip(selected_token).view(B, self.num_heads, self.head_dim).unsqueeze(1)  # (B, num_heads, 1, head_dim)
+
+        # Attention scores and softmax
+        attn = torch.einsum('bhid,bhjd->bhij', query, key) / self.norm_attention  # (B, num_heads, 1, N)
+        bias = self.unique_bias_param[self.relative_indexes[selected_idx]].unsqueeze(1)  # (B, 1, N)
+        attn = torch.softmax(attn + bias, dim=-1)  # (B, num_heads, 1, N)
+
+        # Top-k masking
+        if self.top_k is not None:
+            topk_values, topk_indices = torch.topk(attn, self.top_k, dim=-1)  # (B, num_heads, 1, top_k)
+            mask = torch.zeros_like(attn).scatter_(-1, topk_indices, 1.0)  # Create mask for top-k
+            attn = attn * mask  # Zero out non-top-k values
+            attn = attn / (attn.sum(dim=-1, keepdim=True) + 1e-9)  # Re-normalize over top-k
+
+        # Weighted sum of values
+        y = torch.einsum('bhij,bhjd->bhid', attn, value)  # (B, num_heads, 1, head_dim)
+        y = y.squeeze(2).reshape(B, -1)  # Concatenate heads: (B, qkv_dim)
+
+        # Add skip connection, apply dropout, and final projection
+        y = torch.relu(y + selected_token_transformed.squeeze(1).reshape(B, -1))  # (B, qkv_dim)
+        y = self.final_dropout(y)
+        y = self.out_proj(y)  # (B, qkv_dim)
+        y = self.fc_final(y)  # (B, 2)
+
+        return y
 
 class SwinBreastCancer(torch.nn.Module):
     def __init__(self, num_classes=2, image_size=(2240,1792), **kwargs):
@@ -193,8 +291,22 @@ class SwinBreastCancer(torch.nn.Module):
             print("Using RelevantTokenAttention")
             window_size_x = kwargs.get("window_size_x", 4)
             window_size_y = kwargs.get("window_size_y", 5)
-            self.fusion = RelevantTokenAttention(window_size_x, window_size_y, qv_dim = 256, token_dim = self.patch_model[1].head.fc[1].in_features)
+            self.fusion = RelevantTokenAttention(window_size_x, window_size_y, qkv_dim = 256, token_dim = self.patch_model[1].head.fc[1].in_features)
             self.fusion.init_scorer_from_patchmodel(self.patch_model)
+        elif kwargs.get("patch_fusion", "PatchFusionAttention") == "MultiHeadRelevantTokenAttention":
+            print("Using MultiHeadRelevantTokenAttention with top k")
+            print("window_size_x:", kwargs.get("window_size_x", 4))
+            print("window_size_y:", kwargs.get("window_size_y", 5))
+            print("top_k:", kwargs.get("top_k", None))
+            print("num_heads:", kwargs.get("num_heads", 4))
+            window_size_x = kwargs.get("window_size_x", 4)
+            window_size_y = kwargs.get("window_size_y", 5)
+            top_k = kwargs.get("top_k", None)
+            num_head = kwargs.get("num_heads", 4)
+            
+            self.fusion = MultiHeadRelevantTokenAttention(window_size_x, window_size_y, qkv_dim = 256, 
+                                                        token_dim = self.patch_model[1].head.fc[1].in_features, 
+                                                        num_heads=num_head, top_k=top_k)
         
         #self.freeze_patch_model()
         if kwargs.get("LoRA", False):
