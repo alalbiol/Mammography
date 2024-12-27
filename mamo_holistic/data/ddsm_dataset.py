@@ -997,7 +997,8 @@ class DDSM_Image_Dataset(Dataset):
                 random_seed = 42,
                 num_normal_images_test = 700,
                 geometrical_transform = None,
-                intensity_transform = None):
+                intensity_transform = None,
+                use_all_images = False):
             
         
         self.split_csv = split_csv
@@ -1008,6 +1009,7 @@ class DDSM_Image_Dataset(Dataset):
         self.num_normal_images_test = num_normal_images_test
         self.geometrical_transform = geometrical_transform
         self.intensity_transform = intensity_transform
+        self.use_all_images = use_all_images # use all images in the dataset including not annotated in cancer/benign folders
         
         self.ddsm_annotations = self.load_annotations(split_csv, ddsm_annotations)
         
@@ -1078,10 +1080,11 @@ class DDSM_Image_Dataset(Dataset):
                 # las quitamos de momento porque tenemos muchas mas normales
                 # y las benignas tambien no son cancer
                 imagenes_sin_anot += 1
-                anot['image_id'] = image_id
-                anot['mask_id'] = None
-                anot['breast_malignant'] = False
-                annotations_final.append(anot)
+                if self.use_all_images:
+                    anot['image_id'] = image_id
+                    anot['mask_id'] = None
+                    anot['breast_malignant'] = False
+                    annotations_final.append(anot)
                 
             
             
@@ -1207,8 +1210,10 @@ class DDSM_Image_Dataset_mixup(DDSM_Image_Dataset):
             num_normal_images_test = 700,
             geometrical_transform = None,
             intensity_transform = None,
-            mixup_alpha = 0.4):
+            mixup_alpha = 0.4,
+            use_all_images = False):
         
+
         super().__init__(split_csv, ddsm_annotations, root_dir,
             convert_to_rgb = convert_to_rgb,
             return_mask=return_mask,
@@ -1216,7 +1221,8 @@ class DDSM_Image_Dataset_mixup(DDSM_Image_Dataset):
             random_seed = random_seed,
             num_normal_images_test = num_normal_images_test,
             geometrical_transform = geometrical_transform,
-            intensity_transform = intensity_transform)
+            intensity_transform = intensity_transform,
+            use_all_images = use_all_images)
         
         self.mixup_alpha = mixup_alpha
         
@@ -1343,7 +1349,8 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                         subset_size=self.subset_size_train, random_seed=self.random_seed,
                                         geometrical_transform=geometrical_transform,
                                         intensity_transform=intensity_transform,
-                                        return_mask=self.return_mask)  
+                                        return_mask=self.return_mask,
+                                        use_all_images=True)  
         else:
             dataset = DDSM_Image_Dataset_mixup(self.train_csv, self.ddsm_annotations, self.ddsm_root, 
                                         convert_to_rgb=False, 
@@ -1351,7 +1358,8 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                         geometrical_transform=geometrical_transform,
                                         intensity_transform=intensity_transform,
                                         return_mask=self.return_mask,
-                                        mixup_alpha=self.mixup_alpha)
+                                        mixup_alpha=self.mixup_alpha,
+                                        use_all_images=True)
         
         if self.balanced_patches:
             print("Using balanced batch sampler")
@@ -1378,7 +1386,8 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                     subset_size=self.subset_size_test, random_seed=self.random_seed,
                                     geometrical_transform=geometrical_transform,
                                     intensity_transform=intensity_transform,
-                                    return_mask=self.return_mask)  
+                                    return_mask=self.return_mask,
+                                    use_all_images=False)  
         
         test_batch_size = self.batch_size  # so we can TTA easily
         dataloader = DataLoader(dataset, batch_size=test_batch_size, shuffle=False, num_workers=self.num_workers)
