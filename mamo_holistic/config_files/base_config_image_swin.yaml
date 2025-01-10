@@ -17,13 +17,13 @@ Datamodule:
   #dream_pilot_folder: /home/alalbiol/Data/mamo/dream_pilot_png_832x1152
   #subset_size_train: 1000
   #subset_size_test: 100
-  mixup_alpha: 0.2
+  mixup_alpha: 0.1
 
 
 Logger:
   type: wandb
   project: ddsm_image
-  name: SwinBreastCancerAttention_RelevantTokenAtt_lr_1e-4_LoRA_qkvr128_wd0.2_mixup_0.2_all_images_tds
+  name: SwinBreastCancerAttention_NikulinFusion_lr_decaying_LoRA_qkv32_wd0.2_mixup_0.1_finaldropout_allimages_tds
   save_dir: /tmp/logs/SwinBreastCancerAttention
 
 LightningModule:
@@ -36,9 +36,23 @@ LightningModule:
     # 6 clases
     patch_checkpoint: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/swin_base_x2_224_cancerlabel_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5/swin_base_x2_224_CE_epoch=28-step=5075-val_auroc=0.924.ckpt
     
-    patch_fusion: RelevantTokenAttention
+    #patch_fusion: RelevantTokenAttention
+    #window_size_x: 4
+    #window_size_y: 5
+    # num_heads: 4
+    # top_k: 20
+    patch_fusion: NikulinFusion
+    window_size_x: 4
+    window_size_y: 5
+
+      #target_modules: ['qkv']
+      #target_modules: ["qkv", "fc1", "fc2", "proj"]
+      #warmup_epochs: 5
+      #warmup_lr: 1.e-6
+      #min_lr: 1.e-8
+      #last_epoch: -1
     LoRA:
-     r: 128
+     r: 32
      lora_alpha: 32
      lora_dropout: 0.2
      target_modules: ['qkv']
@@ -86,8 +100,18 @@ Callbacks:
   #   num_rows: 2
   LearningRateMonitor:
     logging_interval: 'epoch'
-#  FreezePatchLayersCallback:
-#    freeze_epochs: 5
+  ReduceLROnEpochsCallback:
+    every_n_epochs: 10
+    factor: 0.5
+    min_lr: 2.e-6
+  #LearningRateWarmUpCallback:
+  #  warmup_epochs: 2
+  #  max_lr: 1.e-4
+  #  initial_lr: 1.e-8
+  #FreezeLoRALayersCallback:
+  #  freeze_epochs: 2
+  #FreezePatchLayersCallback:
+  #  freeze_epochs: 1
   # ModelCheckpoint:
   #   monitor: val_auroc
   #   mode: max

@@ -260,6 +260,59 @@ class MultiHeadRelevantTokenAttention(nn.Module):
 
         return y
 
+class NikulinFusion(nn.Module):
+    def __init__(self, input_feat=1024, kernel_size_x=4, kernel_size_y=5):
+        super().__init__()
+        self.input_feat = input_feat
+        kernel_size = (kernel_size_y, kernel_size_x)
+
+        self.patch_classifier = nn.Conv2d(input_feat, 5, kernel_size=(1, 1), stride=1, padding=0, bias=True)
+
+        # Normalize all features at each spatial location
+        self.ln1_final = nn.LayerNorm([5, kernel_size_y, kernel_size_x])
+        self.fc1_final = nn.Conv2d(5, 16, kernel_size=kernel_size, stride=1, padding=0, bias=False)
+
+        self.ln2_final = nn.LayerNorm([16, 1, 1])  # For single spatial location
+        self.fc2_final = nn.Conv2d(16, 8, kernel_size=1, stride=1, padding=0, bias=False)
+
+        self.ln3_final = nn.LayerNorm([8, 1, 1])  # For single spatial location
+        self.fc3_final = nn.Conv2d(8, 2, kernel_size=1, stride=1, padding=0, bias=False)
+
+        self.ln_shortcut_final = nn.LayerNorm([5, kernel_size_y, kernel_size_x])
+        self.shortcut_final = nn.Conv2d(5, 2, kernel_size=kernel_size, stride=1, padding=0, bias=False)
+
+    def init_from_patchmodel(self, patch_model):
+        weights = patch_model[1].head.fc[1].weight[:5, :].data.cpu()
+        bias = patch_model[1].head.fc[1].bias[:5].data.cpu()
+
+        self.patch_classifier.weight.data = weights.reshape(5, self.input_feat, 1, 1)
+        self.patch_classifier.bias.data = bias
+
+    def forward(self, x):
+        # x shape: (B, H, W, C) Right before patch classifier
+
+        x_in = x.permute(0, 3, 1, 2).contiguous()  # B C H W
+
+        x_in = self.patch_classifier(x_in)  # B 5 H W
+
+        # LayerNorm normalization over all features
+        x = F.relu(self.ln1_final(x_in))  # Normalize all features
+        x = self.fc1_final(x)  # B 16 1 1
+
+        x = F.relu(self.ln2_final(x))  # Normalize all features
+        x = self.fc2_final(x)  # B 8 1 1
+
+        x = F.relu(self.ln3_final(x))  # Normalize all features
+        x = self.fc3_final(x)  # B 2 1 1
+
+        shorcut = self.ln_shortcut_final(x_in)  # Normalize all features
+        shorcut = self.shortcut_final(shorcut)  # B 2 1 1
+
+        final_logits = x + shorcut
+
+        return final_logits[:, :, 0, 0]
+
+
 class SwinBreastCancer(torch.nn.Module):
     def __init__(self, num_classes=2, image_size=(2240,1792), **kwargs):
         super().__init__()
@@ -307,6 +360,12 @@ class SwinBreastCancer(torch.nn.Module):
             self.fusion = MultiHeadRelevantTokenAttention(window_size_x, window_size_y, qkv_dim = 256, 
                                                         token_dim = self.patch_model[1].head.fc[1].in_features, 
                                                         num_heads=num_head, top_k=top_k)
+        elif kwargs.get("patch_fusion", "PatchFusionAttention") == "NikulinFusion":
+            print("Using NikulinFusion")
+            self.fusion = NikulinFusion(input_feat = self.patch_model[1].head.fc[1].in_features)
+            self.fusion.init_from_patchmodel(self.patch_model)
+        else:
+            raise ValueError("Invalid patch_fusion method")
         
         #self.freeze_patch_model()
         if kwargs.get("LoRA", False):
