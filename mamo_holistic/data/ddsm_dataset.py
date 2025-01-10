@@ -1387,7 +1387,7 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                     geometrical_transform=geometrical_transform,
                                     intensity_transform=intensity_transform,
                                     return_mask=self.return_mask,
-                                    use_all_images=False)  
+                                    use_all_images=True)  
         
         test_batch_size = self.batch_size  # so we can TTA easily
         dataloader = DataLoader(dataset, batch_size=test_batch_size, shuffle=False, num_workers=self.num_workers)
