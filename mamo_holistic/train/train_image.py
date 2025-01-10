@@ -360,6 +360,13 @@ def create_callbacks(config):
         elif callback_name == "ReduceLROnEpochsCallback":
             from utils.callbacks import ReduceLROnEpochsCallback
             callbacks.append(ReduceLROnEpochsCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "LearningRateWarmUpCallback":
+            from utils.callbacks import LearningRateWarmUpCallback
+            callbacks.append(LearningRateWarmUpCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "FreezeLoRALayersCallback":
+            from utils.callbacks import FreezeLoRALayersCallback
+            callbacks.append(FreezeLoRALayersCallback(**callbacks_dict[callback_name]))
+
 
 
 

@@ -442,3 +442,44 @@ class ReduceLROnEpochsCallback(pl.Callback):
                        
                     param_group['lr'] = new_lr            
                     print(f"Reduced LR from {old_lr:.6f} to {new_lr:.6f}")
+
+class LearningRateWarmUpCallback(Callback):
+    def __init__(self, initial_lr=0, max_lr=1e-4, warmup_epochs=2):
+        super().__init__()
+        self.initial_lr = initial_lr
+        self.max_lr = max_lr
+        self.warmup_epochs = warmup_epochs
+
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
+        current_epoch = trainer.current_epoch
+        total_steps = len(trainer.train_dataloader)*self.warmup_epochs
+        if current_epoch < self.warmup_epochs:
+            step = trainer.global_step
+            # Calculate the new learning rate
+            new_lr = self.initial_lr + (self.max_lr - self.initial_lr) * (step / total_steps)
+            for param_group in trainer.optimizers[0].param_groups:
+                param_group['lr'] = new_lr
+    def on_epoch_start(self, trainer, pl_module):
+        current_epoch = trainer.current_epoch
+        if current_epoch <= self.warmup_epochs:
+            # print current learning rate
+            for param_group in trainer.optimizers[0].param_groups:
+                print(f"Epoch {current_epoch}: Learning rate set to {param_group['lr']}")
+            
+class FreezeLoRALayersCallback(Callback):
+    def __init__(self, freeze_epochs=2):
+        super().__init__()
+        self.freeze_epochs = freeze_epochs
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        current_epoch = trainer.current_epoch
+        if current_epoch < self.freeze_epochs:
+            for name, param in pl_module.model.named_parameters():
+                if "lora" in name:
+                    param.requires_grad = False
+            print(f"Epoch {current_epoch}: LoRA layers frozen")
+        else:
+            for name, param in pl_module.model.named_parameters():
+                if "lora" in name:
+                    param.requires_grad = True
+            print(f"Epoch {current_epoch}: LoRA layers unfrozen")
