@@ -35,4 +35,5 @@ dependencies:
     - timm
     - peft 
     - transformers
+    - segmentation-models-pytorch
   

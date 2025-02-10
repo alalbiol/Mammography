@@ -1,0 +1,31 @@
+General:
+  gpu_type: RTX_3090
+LightningModule:
+  model_name: unet
+  model_params:
+    encoder_name: resnet34
+    num_classes: 5
+    in_channels: 1
+    attention_type: scse
+  learning_rate: 0.001
+  optimizer_type: adamw
+  optimizer_options:
+    weight_decay: 0.01
+  loss_name: cross_entropy
+
+DataModule:
+  dataset_root: /home/alalbiol/Data/mamo/CBIS-DDSM-segmentation-2240x1792
+  crop_size: 512
+  batch_size: 30
+  num_workers: 20
+
+Logger:
+  type: wandb
+  project: segmentation_cbis_ddsm
+  name: baseline
+  save_dir: /tmp/lightning_logs
+
+# Callbacks:
+#   VisualizeBatchImagesCallback:
+#     num_rows: 2
+ 
