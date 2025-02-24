@@ -1,0 +1,98 @@
+General:
+  source_root: /home/alalbiol/Programacion/Mammography/mamo_holistic
+  gpu_type: "RTX 3090" 
+
+Datamodule:
+  batch_size: 50
+  num_workers: 16
+  pin_memory: True
+  train_set:
+    ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_2240x1792
+    split_csv:  resources/ddsm/ddsm_nikulin_partitions/train_filenames.txt
+    ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_2240_1792.json.gz
+    patch_size: 448
+    convert_to_rgb: False
+    normalize_input: True
+    include_normals: True
+    #subset_size_train: 1000
+  val_set:
+    eval_patches_root: /home/alalbiol/Data/mamo/eval_patches_16bits_448_test_nikulin
+    convert_to_rgb: False
+  #subset_size_test: 100
+
+
+Logger:
+  type: wandb
+  project: ddsm_patch
+  name: swin-base-patch4-window7-224-in22k_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5
+  save_dir: /tmp/logs/ddsm_patch_448_swin
+
+LightningModule:
+  #model_name: swin_base_patch4_window7_224
+  model_name: swin_base_patch4_window7_224.ms_in22k_ft_in1k
+  #model_name: swin_large_patch4_window7_224.ms_in22k
+  model_params:
+    pretrained: True
+    image_size: 224
+    # LoRA:
+    #   r: 64
+    #   lora_alpha: 32
+    #   lora_dropout: 0.2
+    trainable_gray2RGB: True
+      
+
+  learning_rate: 0.0001
+  optimizer_type: adamw
+  optimizer_params:
+    weight_decay: 0.2
+  num_classes: 5
+  #lr_scheduler: ReduceLROnPlateau
+  # lr_scheduler_options:
+  #   mode: max
+  #   factor: 0.5
+  #   patience: 80
+  #   min_lr: 1.e-8
+  loss_name: cross_entropy
+  loss_params:
+    label_smoothing: 0.0
+  # loss_name: focal
+  # loss_params:
+  #   gamma: 2.0
+  mixup_alpha: 0.8
+
+Trainer:
+  max_epochs: 800
+  precision: 16-mixed
+  #gradient_clip_val: 5.0  # Maximum norm of gradients
+  #gradient_clip_algorithm: norm
+  #accumulate_grad_batches: 2
+
+
+
+Callbacks:
+  # EarlyStopping:
+  #   monitor: val_loss
+  #   mode: min
+  #   patience: 60
+  #   verbose: True
+  #VisualizeBatchPatches:
+  #  num_rows: 2
+  LearningRateMonitor:
+    logging_interval: 'epoch'
+  ReduceLROnEpochsCallback:
+    every_n_epochs: 3
+    factor: 0.2
+    min_lr: 5.e-6
+
+  #GradientNormLogger:
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 3
+    dirpath: /tmp/checkpoints/swin-base-patch4-window7-224-in22k_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5
+    filename: swin_base_x2_224_CE_{epoch}-{step}-{val_auroc:.3f}
+    verbose: True
+  #EMACallback:
+  #  decay: 0.99
+  
+  

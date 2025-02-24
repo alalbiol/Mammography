@@ -1,0 +1,9 @@
+Logger:
+  name: swinv2_cr_tiny_ns_224
+  save_dir: /tmp/logs/swinv2_cr_tiny_ns_224
+
+LightningModule:
+  model_name: swinv2_cr_tiny_ns_224
+  
+
+  

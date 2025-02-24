@@ -1,0 +1,16 @@
+Datamodule:
+  patch_size: 224
+  batch_size: 64
+
+Logger:
+  name: resnet50_224_topk
+  save_dir: /tmp/logs/resnet50_224_topk
+
+
+LightningModule:
+  model_name: resnet50
+  n_hard_mining: 10
+
+Callbacks:
+  ModelCheckpoint:
+    dirpath: /tmp/logs/resnet50_224_topk

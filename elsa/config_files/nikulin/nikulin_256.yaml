@@ -1,0 +1,16 @@
+Datamodule:
+  patch_size: 256
+  eval_patches_root: /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_256
+  convert_to_rgb: False
+
+Logger:
+  name: model_nikulin_256
+  save_dir: /tmp/logs/model_nikulin_256
+
+
+LightningModule:
+  model_name: nikulin
+
+Callbacks:
+  ModelCheckpoint:
+    dirpath: /tmp/logs/model_nikulin_256

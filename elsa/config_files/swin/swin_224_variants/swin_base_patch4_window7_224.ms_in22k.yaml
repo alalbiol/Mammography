@@ -1,0 +1,12 @@
+
+
+
+Logger:
+  name: swin_base_patch4_window7_224.ms_in22k.yaml
+  save_dir: /tmp/logs/swin_base_patch4_window7_224.ms_in22k.yaml
+
+LightningModule:
+  model_name: swin_base_patch4_window7_224.ms_in22k.yaml
+  
+
+  
