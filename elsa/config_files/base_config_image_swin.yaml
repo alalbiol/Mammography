@@ -1,0 +1,125 @@
+General:
+  source_root: /home/alalbiol/Programacion/Mammography/mamo_holistic
+  gpu_type: "RTX 3090" 
+
+Datamodule:
+  ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_2240x1792
+  train_csv: resources/ddsm/ddsm_nikulin_partitions/train_filenames.txt
+  val_csv: resources/ddsm/ddsm_nikulin_partitions/valid_filenames.txt
+  ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_2240_1792.json.gz
+  convert_to_rgb: False
+  return_mask: True
+  #ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_1152x896
+  batch_size: 1
+  balanced_patches: True
+  num_workers: 16
+  pin_memory: True
+  #dream_pilot_folder: /home/alalbiol/Data/mamo/dream_pilot_png_832x1152
+  #subset_size_train: 1000
+  #subset_size_test: 100
+  mixup_alpha: 0.1
+
+
+Logger:
+  type: wandb
+  project: ddsm_image
+  name: SwinBreastCancerAttention_NikulinFusion_lr_decaying_LoRA_qkv32_wd0.2_mixup_0.1_finaldropout_allimages_tds
+  save_dir: /tmp/logs/SwinBreastCancerAttention
+
+LightningModule:
+  model_name: SwinBreastCancer
+  model_params:
+    swin_model_name: swin_base_patch4_window7_224
+    # 7 clases
+    #patch_checkpoint: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/swin_base_x2_224_multilabel_CE_epoch=22-step=4025-val_auroc=0.919.ckpt
+    
+    # 6 clases
+    patch_checkpoint: /home/alalbiol/Programacion/Mammography/mamo_holistic/checkpoints/swin_base_x2_224_cancerlabel_mixup_0.8_CE_0.0_wd_0.2_dropout_0.5/swin_base_x2_224_CE_epoch=28-step=5075-val_auroc=0.924.ckpt
+    
+    #patch_fusion: RelevantTokenAttention
+    #window_size_x: 4
+    #window_size_y: 5
+    # num_heads: 4
+    # top_k: 20
+    patch_fusion: NikulinFusion
+    window_size_x: 4
+    window_size_y: 5
+
+      #target_modules: ['qkv']
+      #target_modules: ["qkv", "fc1", "fc2", "proj"]
+      #warmup_epochs: 5
+      #warmup_lr: 1.e-6
+      #min_lr: 1.e-8
+      #last_epoch: -1
+    LoRA:
+     r: 32
+     lora_alpha: 32
+     lora_dropout: 0.2
+     target_modules: ['qkv']
+     #target_modules: ["qkv", "fc1", "fc2", "proj"]
+    #   #warmup_epochs: 5
+      #warmup_lr: 1.e-6
+      #min_lr: 1.e-8
+      #last_epoch: -1
+  learning_rate: 0.0001
+  optimizer_type: adamw
+  optimizer_params:
+    weight_decay: 0.2
+  num_classes: 2
+  loss_name: cross_entropy
+  #loss_params:
+  #  num_classes: 2
+  #lr_scheduler: ReduceLROnPlateau
+  #lr_scheduler_options:
+  #  mode: max
+  #  factor: 0.5
+  #  patience: 20
+  #  min_lr: 1.e-8
+ 
+  test_time_augmentation: False
+ 
+
+
+Trainer:
+  max_epochs: 600
+  log_every_n_steps: 3
+  precision: 16-mixed
+  accumulate_grad_batches: 8
+  #check_val_every_n_epoch: 10
+  #limit_train_batches: 10
+
+
+
+Callbacks:
+  # EarlyStopping:
+  #   monitor: val_loss
+  #   mode: min
+  #   patience: 60
+  #   verbose: True
+  # VisualizeBatch:
+  #   num_rows: 2
+  LearningRateMonitor:
+    logging_interval: 'epoch'
+  ReduceLROnEpochsCallback:
+    every_n_epochs: 10
+    factor: 0.5
+    min_lr: 2.e-6
+  #LearningRateWarmUpCallback:
+  #  warmup_epochs: 2
+  #  max_lr: 1.e-4
+  #  initial_lr: 1.e-8
+  #FreezeLoRALayersCallback:
+  #  freeze_epochs: 2
+  #FreezePatchLayersCallback:
+  #  freeze_epochs: 1
+  # ModelCheckpoint:
+  #   monitor: val_auroc
+  #   mode: max
+  #   save_top_k: 1
+  #   dirpath: /tmp/logs/SwinBreastCancerAttention
+  #   filename: SwinBreastCancerAttention-{step}-{val_auroc:.2f}
+  #   verbose: True
+  #EMACallback:
+  #  decay: 0.9
+  
+  
