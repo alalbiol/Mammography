@@ -43,6 +43,8 @@ def bounding_boxes_coord(id_imagen, bb):
 
     return cajas
 
+# ___________________________________________________________________________________________________________
+
 class CustomDataset (Dataset): #Voy a crear un dataset personalizado a partir de una caja que ya existe (heredación de clases)
     def __init__(self, img_dir, labels_file, transform=None): #Constructor de la clase, con variables propias de la clase
         self.image_dir = img_dir
@@ -73,6 +75,65 @@ class CustomDataset (Dataset): #Voy a crear un dataset personalizado a partir de
         if self.transform:
             image = self.transform(image)
         return image, target
+    
+#_________________________________________________________________________________________________________
+
+class DDSMPatchDataModule(pl.LightningDataModule): # te hace los dataloaders automáticamente 
+    def __init__(self, config):
+        super().__init__()
+        self.source_root = get_parameter(config, ['General', 'source_root'], default=None)
+        
+        self.batch_size = get_parameter(config, ['Datamodule',  'batch_size'])
+        self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
+        
+        self.ddsm_root = get_parameter(config, ['Datamodule', 'train_set','ddsm_root'])
+        # Esto lo tengo que arreglar self.split_csv = get_parameter(config, ['Datamodule', 'train_set','split_csv'])
+         # Esto de momento no me sirve self.ddsm_annotations = get_parameter(config, ['Datamodule','train_set', 'ddsm_annotations'])
+        self.patch_size = get_parameter(config, ['Datamodule', 'train_set', 'patch_size'])
+       # self.convert_to_rgb = get_parameter(config, ["Datamodule", 'train_set', "convert_to_rgb"], default=True)
+       # self.normalize_input = get_parameter(config, ["Datamodule",'train_set', "normalize_input"], default=False)   
+       # self.subset_size_train = get_parameter(config, ['Datamodule', 'train_set','subset_size_train'], default=None)
+       # self.include_normals = get_parameter(config, ['Datamodule','train_set', 'include_normals'], default=True)
+        
+        # Equivale al test en este caso
+        self.eval_patches_root = get_parameter(config, ['Datamodule', 'val_set', 'eval_patches_root'])
+        # self.subset_size_test = get_parameter(config, ['Datamodule', 'val_set', 'subset_size_test'], default=None)
+        
+        self.return_mask = True
+        
+        
+        self.source_root = pathlib.Path(self.source_root) if self.source_root is not None else None
+        self.split_csv = self.source_root / self.split_csv if self.source_root is not None else self.split_csv
+       # self.ddsm_annotations = self.source_root / self.ddsm_annotations if self.source_root is not None else self.ddsm_annotations
+        
+        assert str(self.patch_size) in str(self.eval_patches_root), "eval_patches should be of the same size as the training patches: " + str(self.patch_size)
+        
+        
+    
+    def train_dataloader(self):
+        return get_train_dataloader(self.split_csv, 
+                                    #self.ddsm_annotations, 
+                                    self.ddsm_root, 
+                                    patch_size=self.patch_size,
+                                    batch_size=self.batch_size, 
+                                    #convert_to_rgb=self.convert_to_rgb,
+                                    shuffle=True, num_workers=self.num_workers, 
+                                    return_mask=self.return_mask, #subset_size=self.subset_size_train,
+                                    #include_normals=self.include_normals,
+                                    #normalize_input = self.normalize_input)
+    
+    def val_dataloader(self):
+        return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, 
+                                  # convert_to_rgb=self.convert_to_rgb,
+                                   return_mask=self.return_mask, #subset_size=self.subset_size_test,
+                                   format_img = 'npy')
+        
+    
+    def test_dataloader(self):
+        return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, return_mask=False)
+    
+    
+# _______________________________________________________________________________________________________________-
 
 class CustomModel(L.LightningModule): # Creamos un modelo propio a partir de uno que tiene lightning
     # Inicializamos el modelo 

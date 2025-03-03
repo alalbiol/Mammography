@@ -63,39 +63,18 @@ device = 'cuda'
 print("Dataset generados")
 
 
-
 # In[ ]:
-
-
-#import torch
-#from torch.utils.data import random_split
-
-# Supongamos que 'total_dataset' es tu conjunto de datos personalizado
-#total_dataset = CustomDataset(img_dir=image_directory, labels_file=bb, transform=normalize)
-
-# Calcular los tamaños de los conjuntos de entrenamiento y prueba
-#train_size = int(0.8 * len(total_dataset))
-#test_size = len(total_dataset) - train_size
-
-# Dividir el conjunto de datos en entrenamiento y prueba
-#train_dataset, test_dataset = random_split(total_dataset, [train_size, test_size])
-
-#print(f"Tamaño del conjunto de entrenamiento: {len(train_dataset)}")
-#print(f"Tamaño del conjunto de prueba: {len(test_dataset)}")
-
-
-# In[12]:
 
 
 print(len(train_dataset))
 
 
-# In[13]:
+# In[ ]:
 
 
-train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn= lambda x: tuple(zip(*x)), num_workers = 31)
-valid_dataloader = DataLoader(valid_dataset, batch_size=4, shuffle=False, collate_fn= lambda x: tuple(zip(*x)), num_workers = 31)
-test_dataloader = DataLoader(test_dataset, batch_size=4, shuffle=False, collate_fn= lambda x: tuple(zip(*x)), num_workers = 31)
+train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True, collate_fn= lambda x: tuple(zip(*x)))
+valid_dataloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, collate_fn= lambda x: tuple(zip(*x)))
+test_dataloader = DataLoader(test_dataset, batch_size=2, shuffle=False, collate_fn= lambda x: tuple(zip(*x)))
 
 print("Dataloader generados")
 
@@ -116,7 +95,7 @@ checkpoint_callback = ModelCheckpoint( # Para que guarde las tres mejores época
 )
 
 trainer = L.Trainer(
-    max_epochs=75, 
+    max_epochs=100, 
     devices='auto',
     accelerator='gpu',
     default_root_dir='/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/checkpoints/',
