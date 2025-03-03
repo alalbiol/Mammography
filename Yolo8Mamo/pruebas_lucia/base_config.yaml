@@ -1,16 +1,16 @@
 General:
-  source_root: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo
-  #"D:\home\Data\CBIS-DDSM-segmentation-2240x1792"
+  source_root: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/
   gpu_type: "RTX 3090" 
 
 Datamodule:
-  patch_size: 224
+  patch_size: 1792
  # Esto lo tengo que poner???????????? convert_to_rgb: True
 
-  # Esto lo tengo que arreglar -> split_csv: resources/ddsm/DDSM_train.csv
-  # Esto de momento no me sirve ->  ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
+  split_csv: resources/DDSM_train.csv
   ddsm_root: /home/Data/CBIS-DDSM-segmentation-2240x1792
-  # Esto lo tengo que arreglar eval_patches_root: /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_224
+  eval_patches_root: resources/DDSM_test.csv
+    # Lo de aquí arriba no sé si está bien
+  labels_file: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv 
   batch_size: 32
   num_workers: 16
   pin_memory: True

@@ -10,6 +10,7 @@ import matplotlib.patches as patches
 import torch
 import lightning as L
 from torchmetrics.detection import MeanAveragePrecision
+from load_config import load_config, get_parameter
 
 def bounding_boxes_coord(id_imagen, bb):
 
@@ -52,7 +53,6 @@ class CustomDataset (Dataset): #Voy a crear un dataset personalizado a partir de
         self.transform = transform
 
 
-
     def __len__(self): #Método que devuelve la longitud del dataset
         bounding_boxes = pd.read_csv(self.labels_file)
         bounding_boxes_grouped = bounding_boxes.groupby("id")
@@ -78,25 +78,64 @@ class CustomDataset (Dataset): #Voy a crear un dataset personalizado a partir de
     
 #_________________________________________________________________________________________________________
 
-class DDSMPatchDataModule(pl.LightningDataModule): # te hace los dataloaders automáticamente 
-    def __init__(self, config):
+def get_train_dataloader(split_csv, root_dir, patch_size, batch_size=32, 
+                         shuffle=True, num_workers=4, return_mask=False):  
+    
+    
+    affine_transform = RandomAffineTransform()
+    #affine_transform = IdentityTransform()
+
+
+    patch_sampler = PatchSampler(patch_size, affine_transform=affine_transform,
+                                n_positive_crops = 1, 
+                                n_hard_negative_crop=1,
+                                n_blob_crops=0,
+                                n_random_crops=0)
+
+    dataset = DDSM_Patch_Dataset(split_csv, root_dir, 
+                                return_mask= return_mask, patch_sampler = patch_sampler)
+
+    dataloader_sampler = BalancedPatchBatchSampler(dataset, batch_size)
+
+    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, sampler=dataloader_sampler)
+    return dataloader
+
+def get_test_dataloader(patches_root, batch_size=32, format_img = 'png'):
+    dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, format_img=format_img)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+    return dataloader
+
+
+#__________________________________________________________________________________________________________
+
+class DDSMPatchDataModule(L.LightningDataModule): # te hace los dataloaders automáticamente 
+    def __init__(self, config, transform=None):
+
         super().__init__()
+
+        self.labels_file = get_parameter(config, ['Datamodule', 'train_set','labels_file'])
+        self.transform = transform
+
         self.source_root = get_parameter(config, ['General', 'source_root'], default=None)
+        print(self.source_root)
         
         self.batch_size = get_parameter(config, ['Datamodule',  'batch_size'])
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
         
-        self.ddsm_root = get_parameter(config, ['Datamodule', 'train_set','ddsm_root'])
-        # Esto lo tengo que arreglar self.split_csv = get_parameter(config, ['Datamodule', 'train_set','split_csv'])
-         # Esto de momento no me sirve self.ddsm_annotations = get_parameter(config, ['Datamodule','train_set', 'ddsm_annotations'])
-        self.patch_size = get_parameter(config, ['Datamodule', 'train_set', 'patch_size'])
+        #self.ddsm_root = get_parameter(config, ['Datamodule', 'train_set','ddsm_root'])
+        self.ddsm_root = get_parameter(config, ['Datamodule','ddsm_root'])
+        #self.split_csv = get_parameter(config, ['Datamodule', 'train_set','split_csv'])
+        #self.patch_size = get_parameter(config, ['Datamodule', 'train_set', 'patch_size'])
+        self.patch_size = get_parameter(config, ['Datamodule', 'patch_size'])
+        self.split_csv = get_parameter(config, ['Datamodule', 'split_csv'])
        # self.convert_to_rgb = get_parameter(config, ["Datamodule", 'train_set', "convert_to_rgb"], default=True)
        # self.normalize_input = get_parameter(config, ["Datamodule",'train_set', "normalize_input"], default=False)   
        # self.subset_size_train = get_parameter(config, ['Datamodule', 'train_set','subset_size_train'], default=None)
        # self.include_normals = get_parameter(config, ['Datamodule','train_set', 'include_normals'], default=True)
         
         # Equivale al test en este caso
-        self.eval_patches_root = get_parameter(config, ['Datamodule', 'val_set', 'eval_patches_root'])
+        self.eval_patches_root = get_parameter(config, ['Datamodule', 'eval_patches_root'])
+        #self.eval_patches_root = get_parameter(config, ['Datamodule', 'val_set', 'eval_patches_root'])
         # self.subset_size_test = get_parameter(config, ['Datamodule', 'val_set', 'subset_size_test'], default=None)
         
         self.return_mask = True
@@ -120,8 +159,9 @@ class DDSMPatchDataModule(pl.LightningDataModule): # te hace los dataloaders aut
                                     shuffle=True, num_workers=self.num_workers, 
                                     return_mask=self.return_mask, #subset_size=self.subset_size_train,
                                     #include_normals=self.include_normals,
-                                    #normalize_input = self.normalize_input)
-    
+                                    #normalize_input = self.normalize_input
+        )
+                                    
     def val_dataloader(self):
         return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, 
                                   # convert_to_rgb=self.convert_to_rgb,
@@ -131,6 +171,30 @@ class DDSMPatchDataModule(pl.LightningDataModule): # te hace los dataloaders aut
     
     def test_dataloader(self):
         return get_test_dataloader(self.eval_patches_root, batch_size=self.batch_size, return_mask=False)
+    
+
+    def __len__(self): #Método que devuelve la longitud del dataset
+        bounding_boxes = pd.read_csv(self.labels_file)
+        bounding_boxes_grouped = bounding_boxes.groupby("id")
+        return len(bounding_boxes_grouped)
+    
+    def __getitem__(self, idx): #Método que devuelve un item del dataset
+        bounding_boxes = pd.read_csv(self.labels_file)
+        bounding_boxes_grouped = bounding_boxes.groupby("id")
+        img_id = bounding_boxes_grouped.groups.keys()
+        img_id = list(img_id)[idx]
+        img_name = f"{img_id}.png"
+        img_path = os.path.join(self.ddsm_root, img_name)
+        image = np.array(Image.open(img_path).convert("RGB"))
+        boxes = bounding_boxes_coord(img_id, self.labels_file)
+        boxes = torch.tensor(boxes)
+        labels = torch.ones((boxes.shape[0],), dtype=torch.int64)
+        target = {} # Información de las cajas
+        target["boxes"] = boxes
+        target["labels"] = labels
+        if self.transform:
+            image = self.transform(image)
+        return image, target
     
     
 # _______________________________________________________________________________________________________________-
