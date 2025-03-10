@@ -5,8 +5,8 @@ General:
 Datamodule:
   ddsm_root: /home/Data/mamo/DDSM_png_16bit_1120x896
   train_csv: resources/ddsm/ddsm_nikulin_partitions/train_filenames.txt
-  val_csv: resources/ddsm/ddsm_nikulin_partitions/valid_filenames.txt        #CAMBIADO DE 1152 A 1120
-  ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+  val_csv: resources/ddsm/ddsm_nikulin_partitions/valid_filenames.txt        
+  ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz #CAMBIADO DE 1152 A 1120
   convert_to_rgb: False
   return_mask: True
   #ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_16bit_1152x896
@@ -14,7 +14,7 @@ Datamodule:
   balanced_patches: True
   num_workers: 32
   pin_memory: True
-  dream_pilot_folder: /home/Data/mamo/dream_pilot_png_832x1152
+  #dream_pilot_folder: /home/Data/mamo/dream_pilot_png_832x1152
   #subset_size_train: 1000
   #subset_size_test: 100
 

@@ -1,19 +1,23 @@
 General:
-  source_root: /home/alalbiol/Programacion/Mammography/mamo_holistic
+  source_root: /home/eblanov/proymam2/Mammography/mamo_holistic
   gpu_type: "RTX 3090" 
 
 Datamodule:
-  patch_size: 224
-  convert_to_rgb: True
-  split_csv: resources/ddsm/DDSM_train.csv
-  ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
-  ddsm_root: /home/alalbiol/Data/mamo/DDSM_png_1152x896
-  eval_patches_root: /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_224
-  batch_size: 32
-  num_workers: 16
-  pin_memory: True
-  #subset_size_train: 1000
-  #subset_size_test: 100
+  train_set:
+    patch_size: 224
+    convert_to_rgb: True
+    split_csv: resources/ddsm/DDSM_train.csv
+    ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
+    ddsm_root: /home/Data/mamo/DDSM_png_16bit_1120x896 # he cambiado DDSM_png_1152x896 a DDSM_png_16bit_1120x896
+    batch_size: 32
+    num_workers: 16
+    pin_memory: True
+
+  val_set:
+    eval_patches_root: /home/Data/mamo/eval_patches_16bits_224_test_nikulin # /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_224
+    subset_size_test: 100
+    subset_size_train: 1000
+
 
 
 Logger:

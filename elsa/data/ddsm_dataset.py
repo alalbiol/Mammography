@@ -948,8 +948,8 @@ class DDSMPatchDataModule(pl.LightningDataModule):
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
         
         self.ddsm_root = get_parameter(config, ['Datamodule', 'train_set','ddsm_root'])
-        self.split_csv = get_parameter(config, ['Datamodule', 'train_set','split_csv'])
-        self.ddsm_annotations = get_parameter(config, ['Datamodule','train_set', 'ddsm_annotations'])
+        self.split_csv = get_parameter(config, ['Datamodule', 'train_set', 'split_csv'])
+        self.ddsm_annotations = get_parameter(config, ['Datamodule', 'train_set', 'ddsm_annotations'])
         self.patch_size = get_parameter(config, ['Datamodule', 'train_set', 'patch_size'])
         self.convert_to_rgb = get_parameter(config, ["Datamodule", 'train_set', "convert_to_rgb"], default=True)
         self.normalize_input = get_parameter(config, ["Datamodule",'train_set', "normalize_input"], default=False)   
@@ -964,6 +964,9 @@ class DDSMPatchDataModule(pl.LightningDataModule):
         
         
         self.source_root = pathlib.Path(self.source_root) if self.source_root is not None else None
+        print("Source root: ", self.source_root)
+        print("split csv: ", self.split_csv)
+        print("ddsm annotations: ", self.ddsm_annotations)
         self.split_csv = self.source_root / self.split_csv if self.source_root is not None else self.split_csv
         self.ddsm_annotations = self.source_root / self.ddsm_annotations if self.source_root is not None else self.ddsm_annotations
         
@@ -1369,14 +1372,15 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                         return_mask=self.return_mask,
                                         use_all_images=True)  
         else:
-            dataset = DDSM_Image_Dataset_mixup(self.train_csv, self.ddsm_annotations, self.ddsm_root, 
-                                        convert_to_rgb=False, 
-                                        subset_size=self.subset_size_train, random_seed=self.random_seed,
-                                        geometrical_transform=geometrical_transform,
-                                        intensity_transform=intensity_transform,
-                                        return_mask=self.return_mask,
-                                        mixup_alpha=self.mixup_alpha,
-                                        use_all_images=True)
+            raise NotImplementedError("Mixup not implemented")
+            # dataset = DDSM_Image_Dataset_mixup(self.train_csv, self.ddsm_annotations, self.ddsm_root, 
+            #                             convert_to_rgb=False, 
+            #                             subset_size=self.subset_size_train, random_seed=self.random_seed,
+            #                             geometrical_transform=geometrical_transform,
+            #                             intensity_transform=intensity_transform,
+            #                             return_mask=self.return_mask,
+            #                             mixup_alpha=self.mixup_alpha,
+            #                             use_all_images=True)
         
         if self.balanced_patches:
             print("Using balanced batch sampler")
