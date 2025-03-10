@@ -1,0 +1,62 @@
+General:
+  source_root: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/
+  gpu_type: "RTX 3090" 
+
+Datamodule:
+ #patch_size: 1792
+ # Esto lo tengo que poner???????????? convert_to_rgb: True
+
+  split_csv: resources/DDSM_train.csv
+  #ddsm_root: /home/Data/CBIS-DDSM-segmentation-2240x1792
+  image_directory: /home/Data/CBIS-DDSM-segmentation-2240x1792
+  bb: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv
+  # eval_patches_root: resources/DDSM_test.csv
+    # Lo de aquí arriba no sé si está bien
+  labels_file: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv 
+  batch_size: 32
+  num_workers: 16
+  pin_memory: True
+  #subset_size_train: 1000
+  #subset_size_test: 100
+
+
+Logger:
+  type: wandb
+  project: ddsm_patch
+  name: patches_224
+  save_dir: /tmp/logs/ddsm_patch_224
+
+LightningModule:
+  model_name: resnet18
+  learning_rate: 0.001
+  optimizer_type: adam
+  num_classes: 5
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_options:
+    mode: min
+    factor: 0.5
+    patience: 20
+    min_lr: 1.e-8
+
+Trainer:
+  max_epochs: 200
+
+
+
+Callbacks:
+  # EarlyStopping:
+  #   monitor: val_loss
+  #   mode: min
+  #   patience: 60
+  #   verbose: True
+  LearningRateMonitor:
+    logging_interval: 'epoch'
+  # ModelCheckpoint:
+  #   monitor: val_loss
+  #   mode: min
+  #   save_top_k: 1
+  #   dirpath: /tmp/logs/ddsm_patch_224
+  #   filename: best_model
+  #   verbose: True
+  
+  
