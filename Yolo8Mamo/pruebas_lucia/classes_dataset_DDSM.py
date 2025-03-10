@@ -12,6 +12,8 @@ import lightning as L
 from torchmetrics.detection import MeanAveragePrecision
 from load_config import load_config, get_parameter
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms, datasets, models
+import torchvision.transforms as T
 
 
 # ___________________ESTO ESTÁ BIEN________________________________________________________________________________________
@@ -58,25 +60,35 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
 
     def __len__(self): #Método que devuelve la longitud del dataset
         bounding_boxes = pd.read_csv(self.labels_file)
-        bounding_boxes_grouped = bounding_boxes.groupby("id")
+        # bounding_boxes_grouped = bounding_boxes.groupby("id")
 
         # Extraer la última palabra de cada fila
-        bounding_boxes_grouped["last"] = bounding_boxes_grouped["group"].str.split().str[-1]
+        bounding_boxes["last"] = bounding_boxes["group"].str.split().str[-1]
+        bounding_boxes_grouped  = bounding_boxes[bounding_boxes["last"] == type]
+        bounding_boxes_grouped = bounding_boxes_grouped.groupby("id")
+
+
+
+        #bounding_boxes_grouped["last"] = bounding_boxes_grouped["group"].str.split().str[-1]
     
         # Filtrar filas donde la última palabra sea la deseada
-        bounding_boxes_grouped  = bounding_boxes_grouped[bounding_boxes_grouped["last"] == type]
+        #bounding_boxes_grouped  = bounding_boxes_grouped[bounding_boxes_grouped["last"] == type]
 
         return len(bounding_boxes_grouped)
     
     def __getitem__(self, idx): #Método que devuelve un item del dataset
         bounding_boxes = pd.read_csv(self.labels_file)
-        bounding_boxes_grouped = bounding_boxes.groupby("id")
+        #bounding_boxes_grouped = bounding_boxes.groupby("id")
 
         # Extraer la última palabra de cada fila
-        bounding_boxes_grouped["last"] = bounding_boxes_grouped["group"].str.split().str[-1]
+        bounding_boxes["last"] = bounding_boxes["group"].str.split().str[-1]
+        bounding_boxes_grouped  = bounding_boxes[bounding_boxes["last"] == type]
+        bounding_boxes_grouped = bounding_boxes_grouped.groupby("id")
+
+        #bounding_boxes_grouped["last"] = bounding_boxes_grouped["group"].str.split().str[-1]
     
         # Filtrar filas donde la última palabra sea la deseada
-        bounding_boxes_grouped  = bounding_boxes_grouped[bounding_boxes_grouped["last"] == type]
+        #bounding_boxes_grouped  = bounding_boxes_grouped[bounding_boxes_grouped["last"] == type]
 
         img_id = bounding_boxes_grouped.groups.keys()
         img_id = list(img_id)[idx]
@@ -97,15 +109,18 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
 
 #def get_train_dataloader(image_directory, bb, split_csv_train, root_dir,batch_size=32, 
                          #shuffle=True, num_workers=4, return_mask=False):  
-def get_train_dataloader(image_directory, bb, batch_size=batch_size,num_workers=num_workers):
-
+def get_train_dataloader(image_directory, bb, batch_size,num_workers):
+    
+    normalize = T.Compose([ T.ToTensor()])
 
     #dataset = DDSM_CustomDataset(split_csv, root_dir, return_mask= return_mask, patch_sampler = patch_sampler)
     dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = normalize, type = "train")
     dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
     return dataloader
 
-def get_test_dataloader(image_directory, bb, batch_size=batch_size,num_workers=num_workers):
+def get_test_dataloader(image_directory, bb, batch_size,num_workers):
+
+    normalize = T.Compose([ T.ToTensor()])
 
     dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = normalize, type = "test")
     dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
@@ -128,28 +143,7 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
         self.image_directory = get_parameter(config, ['Datamodule','image_directory'])
         self.bb = get_parameter(config, ['Datamodule','bb'])
         
-        #self.ddsm_root = get_parameter(config, ['Datamodule', 'train_set','ddsm_root'])
-        #self.ddsm_root = get_parameter(config, ['Datamodule','ddsm_root'])
-        #self.split_csv = get_parameter(config, ['Datamodule', 'train_set','split_csv'])
-        #self.patch_size = get_parameter(config, ['Datamodule', 'train_set', 'patch_size'])
-        #self.patch_size = get_parameter(config, ['Datamodule', 'patch_size'])
-       # self.split_csv = get_parameter(config, ['Datamodule', 'split_csv'])
-       # self.convert_to_rgb = get_parameter(config, ["Datamodule", 'train_set', "convert_to_rgb"], default=True)
-       # self.normalize_input = get_parameter(config, ["Datamodule",'train_set', "normalize_input"], default=False)   
-       # self.subset_size_train = get_parameter(config, ['Datamodule', 'train_set','subset_size_train'], default=None)
-       # self.include_normals = get_parameter(config, ['Datamodule','train_set', 'include_normals'], default=True)
-
-        
-        #self.return_mask = True
-        
-        
-        #self.source_root = pathlib.Path(self.source_root) if self.source_root is not None else None
-        #self.split_csv = self.source_root / self.split_csv if self.source_root is not None else self.split_csv
-       # self.ddsm_annotations = self.source_root / self.ddsm_annotations if self.source_root is not None else self.ddsm_annotations
-        
-        # assert str(self.patch_size) in str(self.eval_patches_root), "eval_patches should be of the same size as the training patches: " + str(self.patch_size)
-        
-        
+       
     
     def train_dataloader(self):
         return get_train_dataloader(image_directory=self.image_directory, 

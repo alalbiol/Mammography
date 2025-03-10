@@ -1,6 +1,9 @@
 import yaml
 import sys
 import os
+import pathlib
+
+sys.path.append("..")
 
 # Parse base YAML config and mrge override YAML config
 # Return a dictionary

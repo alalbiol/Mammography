@@ -8,7 +8,7 @@ Datamodule:
 
   split_csv: resources/DDSM_train.csv
   #ddsm_root: /home/Data/CBIS-DDSM-segmentation-2240x1792
-  image_directory: /home/Data/CBIS-DDSM-segmentation-2240x1792
+  image_directory: /home/Data/CBIS-DDSM-segmentation-2240x1792/images
   bb: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv
   # eval_patches_root: resources/DDSM_test.csv
     # Lo de aquí arriba no sé si está bien

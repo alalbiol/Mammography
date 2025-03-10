@@ -21,7 +21,7 @@ from torch.utils.data import Dataset, DataLoader
 class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir de uno que tiene lightning
     # Inicializamos el modelo 
     def __init__(self, model):
-        super(CustomModel, self).__init__()
+        super(DDSM_CustomModel, self).__init__()
         self.model = model
         self.map_test=MeanAveragePrecision(iou_type="bbox", extended_summary=True, class_metrics=True)
         self.map=MeanAveragePrecision(iou_type="bbox", extended_summary=True, class_metrics=True)
