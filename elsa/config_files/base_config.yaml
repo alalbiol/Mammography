@@ -3,14 +3,15 @@ General:
   gpu_type: "RTX 3090" 
 
 Datamodule:
+  num_classes: 5
+  batch_size: 35
+  num_workers: 16
   train_set:
-    patch_size: 224
     convert_to_rgb: True
     split_csv: resources/ddsm/DDSM_train.csv
     ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
+    patch_size: 224
     ddsm_root: /home/Data/mamo/DDSM_png_16bit_1120x896 # he cambiado DDSM_png_1152x896 a DDSM_png_16bit_1120x896
-    batch_size: 32
-    num_workers: 16
     pin_memory: True
 
   val_set:

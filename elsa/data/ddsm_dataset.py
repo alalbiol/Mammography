@@ -50,6 +50,8 @@ class BalancedPatchBatchSampler(torch.utils.data.sampler.Sampler):
         sample_classes = np.unique(self.labels)
         self.num_classes = len(sample_classes) # ¿cuántas hay en total? esto lo hacemos por si cambiamos el dataset, para que este mas generalizado
         
+        print("Number of classes: ", self.num_classes)
+        print("Batch size: ", batch_size)
         # nos aseguramos de que el tamaño del lote sea múltiplo del número de clases, así cada batch tendrá el mismo número de muestras de cada clase
         assert batch_size % self.num_classes == 0, "Batch size must be multiple of number of classes"
 
