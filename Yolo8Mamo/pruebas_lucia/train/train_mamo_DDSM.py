@@ -23,7 +23,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 import argparse
 import yaml
-#import wandb
+from pytorch_lightning.loggers import WandbLogger
 
 
 
@@ -40,6 +40,7 @@ from classes_model_DDSM import DDSM_CustomModel
 
 
 # Training the model
+# Para que ejecute en terminal : python train_mamo_DDSM.py --config_file base_config.yaml
 if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description="Train a ddsm detector.")
@@ -65,6 +66,8 @@ if __name__ == "__main__":
 
     
     normalize = T.Compose([ T.ToTensor()])
+
+    logger=WandbLogger(project='Mamo')
     
 
     model = fasterrcnn_resnet50_fpn(num_classes=2, weights_backbone=ResNet50_Weights.IMAGENET1K_V1)
@@ -87,22 +90,24 @@ if __name__ == "__main__":
 
 
     checkpoint_callback = ModelCheckpoint( # Para que guarde las tres mejores épocas 
-        monitor='val_map',
+        monitor='train_loss_epoch',
         dirpath='/home/lloprib/',
-        filename='mamo-{epoch:02d}-{val_map:.2f}',
+        filename='mamo-{epoch:02d}-{train_loss_epoch:.2f}',
         save_top_k=3,
         mode='max',
     )
 
     trainer = L.Trainer(
-        max_epochs=1, 
+        max_epochs=50, 
         devices='auto',
         accelerator='gpu',
         default_root_dir='/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/checkpoints/',
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback],
+        logger=logger,
     )
 
     trainer.fit(Lmodel, data_module)
+    trainer.test(Lmodel, data_module)
 
 
     print("Training finished")

@@ -56,6 +56,7 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         self.image_dir = img_dir
         self.labels_file = labels_file
         self.transform = transform
+        self.type = type
 
 
     def __len__(self): #Método que devuelve la longitud del dataset
@@ -63,8 +64,7 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         # bounding_boxes_grouped = bounding_boxes.groupby("id")
 
         # Extraer la última palabra de cada fila
-        bounding_boxes["last"] = bounding_boxes["group"].str.split().str[-1]
-        bounding_boxes_grouped  = bounding_boxes[bounding_boxes["last"] == type]
+        bounding_boxes_grouped  = bounding_boxes[bounding_boxes["group"] == self.type]
         bounding_boxes_grouped = bounding_boxes_grouped.groupby("id")
 
 
@@ -81,8 +81,7 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         #bounding_boxes_grouped = bounding_boxes.groupby("id")
 
         # Extraer la última palabra de cada fila
-        bounding_boxes["last"] = bounding_boxes["group"].str.split().str[-1]
-        bounding_boxes_grouped  = bounding_boxes[bounding_boxes["last"] == type]
+        bounding_boxes_grouped  = bounding_boxes[bounding_boxes["group"] == self.type]
         bounding_boxes_grouped = bounding_boxes_grouped.groupby("id")
 
         #bounding_boxes_grouped["last"] = bounding_boxes_grouped["group"].str.split().str[-1]
@@ -115,7 +114,10 @@ def get_train_dataloader(image_directory, bb, batch_size,num_workers):
 
     #dataset = DDSM_CustomDataset(split_csv, root_dir, return_mask= return_mask, patch_sampler = patch_sampler)
     dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = normalize, type = "train")
-    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
+    print("AQUI------------------------------------------------")
+    print(len(dataset))
+    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)))
+    # collate_fn --> para que funcionen las listas de diccionarios con los batches 
     return dataloader
 
 def get_test_dataloader(image_directory, bb, batch_size,num_workers):
@@ -123,7 +125,7 @@ def get_test_dataloader(image_directory, bb, batch_size,num_workers):
     normalize = T.Compose([ T.ToTensor()])
 
     dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = normalize, type = "test")
-    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
+    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)))
     return dataloader
 
 #_________________________________________________________________________________________________________
@@ -141,8 +143,7 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
         self.batch_size = get_parameter(config, ['Datamodule',  'batch_size'])
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
         self.image_directory = get_parameter(config, ['Datamodule','image_directory'])
-        self.bb = get_parameter(config, ['Datamodule','bb'])
-        
+        self.bb = get_parameter(config, ['Datamodule','bb'])   
        
     
     def train_dataloader(self):

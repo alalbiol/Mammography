@@ -13,7 +13,7 @@ Datamodule:
   # eval_patches_root: resources/DDSM_test.csv
     # Lo de aquí arriba no sé si está bien
   labels_file: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv 
-  batch_size: 32
+  batch_size: 4
   num_workers: 16
   pin_memory: True
   #subset_size_train: 1000
