@@ -97,23 +97,36 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         boxes = bounding_boxes_coord(img_id, self.labels_file)
         boxes = torch.tensor(boxes)
         labels = torch.ones((boxes.shape[0],), dtype=torch.int64)
+        labels = labels.tolist()
         target = {} # Información de las cajas
-        target["boxes"] = boxes
-        target["labels"] = labels
+
         if self.transform:
-            image = self.transform(image)
+            transformed = self.transform(
+                image=image,
+                bboxes=boxes,
+                category_ids=labels
+            )
+
+            image = transformed['image']
+            boxes = torch.tensor(transformed["bboxes"], dtype=torch.float32)
+            labels = torch.tensor(transformed["category_ids"], dtype=torch.int64)
+
+        target["boxes"] = boxes
+        target["labels"] = labels    
+
+
         return image, target
     
 #_________________________________________________________________________________________________________
 
 #def get_train_dataloader(image_directory, bb, split_csv_train, root_dir,batch_size=32, 
                          #shuffle=True, num_workers=4, return_mask=False):  
-def get_train_dataloader(image_directory, bb, batch_size,num_workers):
+def get_train_dataloader(image_directory, bb, batch_size,num_workers, transform=None):
     
-    normalize = T.Compose([ T.ToTensor()])
+    #normalize = T.Compose([ T.ToTensor()])
 
     #dataset = DDSM_CustomDataset(split_csv, root_dir, return_mask= return_mask, patch_sampler = patch_sampler)
-    dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = normalize, type = "train")
+    dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = transform, type = "train")
     print("AQUI------------------------------------------------")
     print(len(dataset))
     dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)))
@@ -122,7 +135,7 @@ def get_train_dataloader(image_directory, bb, batch_size,num_workers):
 
 def get_test_dataloader(image_directory, bb, batch_size,num_workers):
 
-    normalize = T.Compose([ T.ToTensor()])
+    normalize = T.Compose([ T.ToTensor()]) # PONER EL TO TENSOR DE ALBUMENTATIONS
 
     dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = normalize, type = "test")
     dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)))
@@ -150,11 +163,11 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
         return get_train_dataloader(image_directory=self.image_directory, 
                                     bb=self.bb, 
                                     batch_size=self.batch_size, 
-                                    num_workers=self.num_workers) 
+                                    num_workers=self.num_workers, transform = self.transform) 
         
     
     def test_dataloader(self):
         return get_test_dataloader(image_directory=self.image_directory, 
                                     bb=self.bb, 
                                     batch_size=self.batch_size, 
-                                    num_workers=self.num_workers)
+                                    num_workers=self.num_workers, )

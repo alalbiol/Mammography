@@ -33,11 +33,11 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
     def training_step(self, batch, batch_idx): # Qué tiene que hacer la red por cada batch
         images, targets = batch
 
-        images = list(image for image in images)
+        images = list(image for image in images)  
         
         targets = [{k: v for k, v in t.items()} for t in targets]
 
-        loss_dict = self.model(images, targets)
+        loss_dict = self.model(images, targets) # Como paso imagenes y targets saca la pérdida
 
         losses = sum(loss for loss in loss_dict.values())
 
@@ -45,37 +45,38 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
 
         return losses
     
-   # def validation_step(self, batch, batch_idx): # Qué tiene que hacer la red por cada batch de validación
-    #    images, targets = batch
-
-    #    images = list(image for image in images)
-    #    targets = [{k: v for k, v in t.items()} for t in targets]
-
-    #    predictions = self.model(images)
-    #    self.map.update(predictions, targets)
-
-    #def on_validation_epoch_end(self):
-    #    metrica = self.map.compute()
-
-    #    self.log("val_map", metrica["map"], on_epoch=True, prog_bar=True)
-    #    self.log("val_precisions", metrica["map_75"], on_epoch=True, prog_bar=True)
-    #    self.log("val_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True)
-
-    #    self.map.reset()
-
-    def test_step(self, batch, batch_idx): # Qué tiene que hacer la red por cada batch de test
+    def validation_step(self, batch, batch_idx): # Qué tiene que hacer la red por cada batch de validación
         images, targets = batch
-        images=list(image for image in images)
-        targets = [{k: v for k, v in t.items()} for t in targets]
-        predictions = self.model(images)
-        self.map_test.update(predictions, targets)
 
-    def on_test_epoch_end(self):
-        metrica = self.map_test.compute()
-        self.log("test_map", metrica["map"], on_epoch=True, prog_bar=True)
-        self.log("test_precisions", metrica["map_75"], on_epoch=True, prog_bar=True)
-        self.log("test_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True)
-        self.map_test.reset()
+        images = list(image for image in images)
+        targets = [{k: v for k, v in t.items()} for t in targets]
+
+        predictions = self.model(images)
+        self.map.update(predictions, targets)
+
+    def on_validation_epoch_end(self):
+        metrica = self.map.compute()
+
+        self.log("val_map", metrica["map"], on_epoch=True, prog_bar=True)
+        self.log("val_precisions", metrica["map_75"], on_epoch=True, prog_bar=True)
+        self.log("val_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True)
+
+        self.map.reset()
+
+    #def test_step(self, batch, batch_idx): # Qué tiene que hacer la red por cada batch de test
+        #images, targets = batch
+        #images=list(image for image in images)
+        #targets = [{k: v for k, v in t.items()} for t in targets]
+        #predictions = self.model(images) # Al solo pasar imagenes me saca las predicciones
+        #self.map_test.update(predictions, targets)
+
+    #def on_test_epoch_end(self):
+        #metrica = self.map_test.compute()
+        #self.log("test_map", metrica["map"], on_epoch=True, prog_bar=True)
+        #self.log("test_precisions", metrica["map_75"], on_epoch=True, prog_bar=True)
+        #self.log("test_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True)
+        #self.map_test.reset()
+
 
     def on_epoch_end(self):
         if self.current_epoch % 1 == 0:
@@ -84,3 +85,4 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
     def configure_optimizers(self): # Configuramos el optimizador
         optimizer = torch.optim.SGD(self.model.parameters(), lr=0.005, weight_decay = 1e-4, momentum=0.9)
         return optimizer
+
