@@ -446,13 +446,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load configuration from YAML file
-    config = load_config(args.config_file, override_file=args.overrides)
+    config = load_config(args.config_file, override_file=args.overrides) 
     
     from pprint import pprint
     pprint(config)
-    
+   
     GPU_TYPE = get_parameter(config, ["General", "gpu_type"],"None")
-    if GPU_TYPE == "RTX 3090":
+    if GPU_TYPE == "RTX 3090" or GPU_TYPE == "RTX 5090":
         torch.set_float32_matmul_precision('medium') # recomended for RTX 3090
    
     

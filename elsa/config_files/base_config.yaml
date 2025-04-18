@@ -1,6 +1,6 @@
 General:
-  source_root: /home/eblanov/proymam2/Mammography/mamo_holistic
-  gpu_type: "RTX 3090" 
+  source_root: /home/eblanov/proymam2/Mammography/elsa
+  gpu_type: "RTX 5090" 
 
 Datamodule:
   num_classes: 5
@@ -13,11 +13,12 @@ Datamodule:
     patch_size: 224
     ddsm_root: /home/Data/mamo/DDSM_png_16bit_1120x896 # he cambiado DDSM_png_1152x896 a DDSM_png_16bit_1120x896
     pin_memory: True
+    include_normals: False
 
   val_set:
     eval_patches_root: /home/Data/mamo/eval_patches_16bits_224_test_nikulin # /home/alalbiol/Data/mamo/DDSM_eval_patches/eval_patches_224
-    subset_size_test: 100
-    subset_size_train: 1000
+    #subset_size_test: 100
+    #subset_size_train: 1000
 
 
 

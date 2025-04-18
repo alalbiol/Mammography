@@ -30,4 +30,5 @@ echo "Current working directory: $(pwd)"
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals.yaml
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals_WC.yaml
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_lrwarmup.yaml
-python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_mixup.yaml
+#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml #--logger false
+python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_mixup.yaml #--logger false

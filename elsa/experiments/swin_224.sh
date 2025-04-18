@@ -60,5 +60,5 @@ echo "Current working directory: $(pwd)"
 # python train/train.py --config config_files/swin/swin_224.yaml    \
 #             --overrides  config_files/swin/swin_224_variants/swin_large_patch4_window7_224.ms_in22k_lora.yaml
 
-python train/train.py --config config_files/swin/swin_224.yaml  
+python train/train.py --config config_files/swin/swin_224.yaml 
 

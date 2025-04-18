@@ -487,9 +487,17 @@ class PatchSampler(object):
         inverse_transform = transform.GetInverse()
         
         if points is  None:
+            print("No tenemos puntos!!")
             transformed_points = None
         else:
             transformed_points = np.array([inverse_transform.TransformPoint(point) for point in points])
+            
+            
+        if transformed_points.shape[0] == 0:
+            print("Original points", points)
+            print("Transformed points", transformed_points)
+            #import sys
+            #sys.exit()
         
         bbs = sample_hard_negative_bb(transformed_points, self.patch_size, nb_bkg=1, neg_cutoff=self.neg_cutoff )
     
@@ -729,7 +737,7 @@ class DDSM_Patch_Dataset(Dataset):
         
         if abnormality != 'NORMAL':
             image, mask = self.patch_sampler.sample_abnormal_patch(image, mask, points)
-        elif idx > idx_image:
+        elif points is not None:
             image, mask = self.patch_sampler.sample_hard_negative_patch(image, mask, points)
         else:
             image, mask = self.patch_sampler.sample_blob_patch(image, mask, points)
@@ -935,6 +943,14 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batc
 
 def get_test_dataloader(patches_root, batch_size=32, return_mask=False, convert_to_rgb = True, subset_size=None, format_img = 'png'):
     dataset = DDSM_patch_eval(patches_root, return_mask=return_mask, convert_to_rgb= convert_to_rgb, subset_size=subset_size, format_img=format_img)
+    # print("Patches root: ", patches_root)
+    # print("Tengo dataset de evaluacion con ", len(dataset), " imagenes")
+    # print("Las opciones del dataset son:")
+    # print("return mask: ", return_mask)
+    # print("convert to rgb: ", convert_to_rgb)
+    # print("format img: ", format_img)
+    # print("Subset size: ", subset_size)
+    
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     return dataloader
 

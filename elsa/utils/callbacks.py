@@ -143,8 +143,30 @@ class VisualizeBatchPatchesCallback(Callback):
         train_dataloader = trainer.train_dataloader
         
         batch = next(iter(train_dataloader))
+    
         #images, labels, masks = batch
         
+   
+        # count the number of images of each class
+        # labels = batch[1].numpy()
+        
+        
+        # background_idx = np.where(labels == 0)[0]
+        # benign_mass_idx = np.where(labels == 1)[0]
+        # benign_calc_idx = np.where(labels == 2)[0]
+        # malig_mass_idx = np.where(labels == 3)[0]
+        # malig_calc_idx = np.where(labels == 4)[0]
+        
+        
+    
+        
+        # trainer.logger.experiment.log({
+        #     "background": len(background_idx),
+        #     "benign_mass": len(benign_mass_idx),
+        #     "benign_calc": len(benign_calc_idx),
+        #     "malig_mass": len(malig_mass_idx),
+        #     "malig_calc": len(malig_calc_idx)
+        # })
         # Show the batch
         img = show_batch_patch(batch, num_rows=self.num_rows)
         experiment = trainer.logger.experiment

@@ -1,0 +1,40 @@
+name: proymam
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - jupyter
+  - pip:
+      - --pre
+      - --extra-index-url https://download.pytorch.org/whl/nightly/cu128
+      - torch
+      - torchvision
+      - torchaudio
+      - pillow
+      - matplotlib
+      - pandas
+      - pyarrow
+      - scikit-image
+      - scikit-learn
+      - einops
+      - opencv-python
+      - pydicom
+      - h5py
+      - tqdm
+      - ultralytics
+      - google
+      - protobuf
+      - albumentations
+      - supervision
+      - tensorflow
+      - torchmetrics
+      - pytorch-lightning
+      - SimpleITK
+      - shapely
+      - timm
+      - peft 
+      - transformers
+      - segmentation-models-pytorch
+      - wandb

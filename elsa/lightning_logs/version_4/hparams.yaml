@@ -1,0 +1,14 @@
+learning_rate: 0.001
+loss_name: cross_entropy
+loss_params: {}
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_options:
+  factor: 0.5
+  min_lr: 1.0e-08
+  mode: min
+  patience: 20
+mixup_alpha: -1
+n_hard_mining: -1
+num_classes: 5
+optimizer: adam
+optimizer_options: {}

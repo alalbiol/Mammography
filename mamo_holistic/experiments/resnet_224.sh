@@ -12,7 +12,7 @@ else
 fi
 
 # Activate the Mammo environment
-conda activate Mammo
+conda activate proymam
 
 # Your commands here
 echo "Mammo environment activated"
@@ -30,4 +30,4 @@ echo "Current working directory: $(pwd)"
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals.yaml
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals_WC.yaml
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_lrwarmup.yaml
-python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_mixup.yaml
+python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml
