@@ -14,6 +14,8 @@ from load_config import load_config, get_parameter
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets, models
 import torchvision.transforms as T
+from albumentations import Compose, Resize, Normalize
+from albumentations.pytorch import ToTensorV2
 
 
 # ___________________ESTO ESTÁ BIEN________________________________________________________________________________________
@@ -135,9 +137,9 @@ def get_train_dataloader(image_directory, bb, batch_size,num_workers, transform=
 
 def get_test_dataloader(image_directory, bb, batch_size,num_workers):
 
-    normalize = T.Compose([ T.ToTensor()]) # PONER EL TO TENSOR DE ALBUMENTATIONS
+    transform = Compose([ToTensorV2()]) # PONER EL TO TENSOR DE ALBUMENTATIONS
 
-    dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = normalize, type = "test")
+    dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = transform, type = "test")
     dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)))
     return dataloader
 
