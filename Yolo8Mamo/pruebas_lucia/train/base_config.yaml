@@ -49,14 +49,18 @@ Callbacks:
   #   mode: min
   #   patience: 60
   #   verbose: True
-  LearningRateMonitor:
-    logging_interval: 'epoch'
-  # ModelCheckpoint:
-  #   monitor: val_loss
-  #   mode: min
-  #   save_top_k: 1
-  #   dirpath: /tmp/logs/ddsm_patch_224
-  #   filename: best_model
-  #   verbose: True
+  # LearningRateMonitor:
+  #   logging_interval: 'epoch'
+  VisualizeBatchPatches:
+    labels_file: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv 
+    num_rows: 2
+  ModelCheckpoint:
+    monitor: val_loss
+    mode: min
+    save_top_k: 1
+    dirpath: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/checkpoints/best_models
+    filename: best_model
+    verbose: True
+  
   
   

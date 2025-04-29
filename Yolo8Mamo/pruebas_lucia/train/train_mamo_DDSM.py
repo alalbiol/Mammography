@@ -47,45 +47,21 @@ def create_callbacks(config):
     callbacks_dict = get_parameter(config, ["Callbacks"])
     
     for callback_name in callbacks_dict:
-        if callback_name == "EarlyStopping":
-            from pytorch_lightning.callbacks import EarlyStopping
-            callbacks.append(EarlyStopping(**callbacks_dict[callback_name]))
-        elif callback_name == "ModelCheckpoint":
+        if callback_name == "ModelCheckpoint":
             from pytorch_lightning.callbacks import ModelCheckpoint
             callbacks.append(ModelCheckpoint(**callbacks_dict[callback_name]))
-        elif callback_name == "LearningRateMonitor":
-            from pytorch_lightning.callbacks import LearningRateMonitor
-            callbacks.append(LearningRateMonitor(**callbacks_dict[callback_name]))
-        elif callback_name == "LearningRateWarmUp":
-            from utils.callbacks import LearningRateWarmUpCallback
-            callbacks.append(LearningRateWarmUpCallback(**callbacks_dict[callback_name]))
+        # elif callback_name == "LearningRateMonitor":
+        #     from pytorch_lightning.callbacks import LearningRateMonitor
+        #     callbacks.append(LearningRateMonitor(**callbacks_dict[callback_name]))
         elif callback_name == "VisualizeBatchPatches":
-            from utils.callbacks import VisualizeBatchPatchesCallback
+            from callbacks import VisualizeBatchPatchesCallback
             callbacks.append(VisualizeBatchPatchesCallback(**callbacks_dict[callback_name]))
-        elif callback_name == "GradientNormLogger":
-            from utils.callbacks import GradientNormLoggerCallback
-            params = callbacks_dict[callback_name] if callbacks_dict[callback_name] is not None else {}
-            callbacks.append(GradientNormLoggerCallback(**params))
-        elif callback_name == "EMACallback":
-            from utils.callbacks import EMACallback
-            callbacks.append(EMACallback(**callbacks_dict[callback_name]))
-        elif callback_name == "FreezeSwinLayersCallback":
-            from utils.callbacks import FreezeSwinLayersCallback
-            callbacks.append(FreezeSwinLayersCallback(**callbacks_dict[callback_name]))
-        elif callback_name == "LoRACallback":
-            from utils.callbacks import LoRACallback
-            callbacks.append(LoRACallback(**callbacks_dict[callback_name]))
-        elif callback_name == "ReduceLROnEpochsCallback":
-            from utils.callbacks import ReduceLROnEpochsCallback
-            callbacks.append(ReduceLROnEpochsCallback(**callbacks_dict[callback_name]))
 
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
     return callbacks
 
 # ---------------------------------------------------------------------------------------------
-
-
 
 
 
@@ -153,7 +129,7 @@ if __name__ == "__main__":
     
     Lmodel = DDSM_CustomModel(model)
 
-
+    # En principio esto quedará sustituido por la línea  callbacks = create_callbacks(config)
     checkpoint_callback = ModelCheckpoint( # Para que guarde las tres mejores épocas 
         monitor='train_loss_epoch',
         dirpath='/home/lloprib/',
@@ -162,12 +138,17 @@ if __name__ == "__main__":
         mode='max',
     )
 
+    callbacks = create_callbacks(config)
+
+    for cb in callbacks:
+        print(cb, type(cb))
+
     trainer = L.Trainer(
-        max_epochs=50, 
+        max_epochs=1, 
         devices='auto',
         accelerator='gpu',
         default_root_dir='/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/checkpoints/',
-        callbacks=[checkpoint_callback],
+        callbacks=callbacks, # aquí se pondrá callbacks = callbacks
         logger=logger,
     )
 

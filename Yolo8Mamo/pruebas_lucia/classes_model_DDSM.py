@@ -15,6 +15,21 @@ from torch.utils.data import Dataset, DataLoader
 
 
 
+def draw_boxes(img, boxes, labels=None, color='red', linewidth=2, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(1)
+        ax.imshow(img.permute(1, 2, 0).cpu().numpy())
+
+    for i, box in enumerate(boxes):
+        x1, y1, x2, y2 = box.tolist()
+        rect = plt.Rectangle((x1, y1), x2 - x1, y2 - y1,
+                             linewidth=linewidth, edgecolor=color, facecolor='none')
+        ax.add_patch(rect)
+        if labels is not None:
+            ax.text(x1, y1, str(labels[i]), color=color, fontsize=10,
+                    bbox=dict(facecolor='white', alpha=0.5))
+    
+    return ax.figure
 
 # _______________________________ESTO ESTÁ BIEN________________________________________________________________________________-
 
@@ -25,6 +40,8 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
         self.model = model
         self.map_test=MeanAveragePrecision(iou_type="bbox", extended_summary=True, class_metrics=True)
         self.map=MeanAveragePrecision(iou_type="bbox", extended_summary=True, class_metrics=True)
+        self.validation_step_outputs = [] # añadido último
+
 
     def forward(self, x):
         # La salida de la red neuronal es la salida del modelo
@@ -41,7 +58,7 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
 
         losses = sum(loss for loss in loss_dict.values())
 
-        self.log('train_loss', losses, on_epoch=True, prog_bar=True) # Sacamos por pantalla la pérdida
+        self.log('train_loss', losses, on_epoch=True, prog_bar=True, batch_size=4, logger=True) # Sacamos por pantalla la pérdida
 
         return losses
     
@@ -54,14 +71,49 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
         predictions = self.model(images)
         self.map.update(predictions, targets)
 
-    def on_validation_epoch_end(self):
-        metrica = self.map.compute()
+        output = {"images": images, "targets": targets, "preds": predictions} # añadido último
+        self.validation_step_outputs.append(output) # añadido último
+        return output # añadido último
 
-        self.log("val_map", metrica["map"], on_epoch=True, prog_bar=True)
-        self.log("val_precisions", metrica["map_75"], on_epoch=True, prog_bar=True)
-        self.log("val_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True)
+        # return {
+        #     "images": images,
+        #     "targets": targets,
+        #     "preds": predictions
+        # }
+    
+
+
+    def on_validation_epoch_end(self, predictions):
+        metrica = self.map.compute()
+        self.log("val_map", metrica["map"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
+        self.log("val_precisions", metrica["map_75"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
+        self.log("val_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
+
+
+        sample = predictions[0]
+        img = sample["images"][0]
+        gt_boxes = sample["targets"]["boxes"][0]
+        pred_boxes = sample["preds"]["boxes"][0]
+
+        gt_labels = sample["targets"].get("labels", [None])[0]
+        pred_labels = sample["preds"].get("labels", [None])[0]
+
+        # Dibujar solo una vez la imagen
+        fig = draw_boxes(img, gt_boxes, gt_labels, color='green')  # GT en verde
+        draw_boxes(img, pred_boxes, pred_labels, color='red')      # Pred en rojo
+
+        plt.title(f"Validation Epoch {self.current_epoch}")
+        plt.show()
+        plt.close(fig)
+        self.logger.experiment.log({"validation_image": wandb.Image(fig)})
 
         self.map.reset()
+
+    #         for sample in self.validation_step_outputs:
+    #     ...
+    # self.validation_step_outputs.clear()
+
+# --------------------------------------------------------------------------
 
     #def test_step(self, batch, batch_idx): # Qué tiene que hacer la red por cada batch de test
         #images, targets = batch
