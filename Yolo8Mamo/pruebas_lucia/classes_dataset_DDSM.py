@@ -14,42 +14,59 @@ from load_config import load_config, get_parameter
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets, models
 import torchvision.transforms as T
+import albumentations as A
 from albumentations import Compose, Resize, Normalize
 from albumentations.pytorch import ToTensorV2
 
 
 # ___________________ESTO ESTÁ BIEN________________________________________________________________________________________
 
-def bounding_boxes_coord(id_imagen, bb):
+import pandas as pd
+import os
+from PIL import Image
+import numpy as np
+import torch
 
-    """Función para iterar sobre las filas de un DataFrame y dibujar rectángulos.
-    
-    Parameters:
-    group_df (DataFrame): DataFrame de un grupo específico.
+def bounding_boxes_coord(img_id, labels_file):
     """
-
-    bounding_boxes = pd.read_csv(bb)
-    nombre_img = f"{id_imagen}.png"  # Concatenar la extensión
-    bounding_boxes_grouped = bounding_boxes.groupby("id")
-    group_df = bounding_boxes_grouped.get_group(id_imagen)
-
-    boxes=[]
-
-    # Iterar sobre las filas del DataFrame
-    for index, row in group_df.iterrows():
-        # Obtener los valores de las columnas
-        x = row['x']
-        y = row['y']
-        w = row['w']
-        h = row['h']
-        
-        xmin = x
-        ymin = y
-        xmax = x + w
-        ymax = y + h
-        boxes.append([xmin, ymin, xmax, ymax])
-
+    Extracts bounding box coordinates for a given image ID from the labels file.
+    """
+    bounding_boxes = pd.read_csv(labels_file)
+    image_boxes = bounding_boxes[bounding_boxes["id"] == img_id]
+    boxes = image_boxes[["x_min", "y_min", "x_max", "y_max"]].values.tolist()
     return boxes
+
+
+# def bounding_boxes_coord(id_imagen, bb):
+
+#     """Función para iterar sobre las filas de un DataFrame y dibujar rectángulos.
+    
+#     Parameters:
+#     group_df (DataFrame): DataFrame de un grupo específico.
+#     # """
+
+    # bounding_boxes = pd.read_csv(bb)
+    # nombre_img = f"{id_imagen}.png"  # Concatenar la extensión
+    # bounding_boxes_grouped = bounding_boxes.groupby("id")
+    # group_df = bounding_boxes_grouped.get_group(id_imagen)
+
+    # boxes=[]
+
+    # # Iterar sobre las filas del DataFrame
+    # for index, row in group_df.iterrows():
+    #     # Obtener los valores de las columnas
+    #     x = row['x']
+    #     y = row['y']
+    #     w = row['w']
+    #     h = row['h']
+        
+    #     xmin = x
+    #     ymin = y
+    #     xmax = x + w
+    #     ymax = y + h
+    #     boxes.append([xmin, ymin, xmax, ymax])
+
+    # return boxes
 
 # ___________________ESTO ESTÁ BIEN________________________________________________________________________________________
 
@@ -60,14 +77,68 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         self.transform = transform
         self.type = type
 
+        self.bounding_boxes = pd.read_csv(self.labels_file)
+        self.grouped_by_id = self.bounding_boxes[self.bounding_boxes["group"] == self.type].groupby("id")
+
+        # print(self.grouped_by_id.head())
+
+        # for img_id, group in self.grouped_by_id:
+        #     if len(group) == 0:
+        #         print(f"Warning: No bounding boxes found for image ID {img_id} in group {self.type}.")
+        #         continue
+        #     elif len(group) > 1:
+        #         print(f"Warning: More than one bounding box found for image ID {img_id} in group {self.type}.")
+        #         # Optionally, you can choose to handle this case differently
+        #         # For example, you might want to raise an error or take the first bounding box
+        #         # raise ValueError(f"Multiple bounding boxes found for image ID {img_id} in group {self.type}.")
+        #         # Or just skip it
+        #         print(img_id, group)
+
+        #         print("boxes")
+        #         print(self.bounding_boxes_coord(img_id))
+        #         sys.exit()
+        #     else:
+        #         continue
+
+
+        # sys.exit()
+
+        self.img_ids = list(self.grouped_by_id.groups.keys())
+
+
+
+    def bounding_boxes_coord(self, id_imagen):
+
+        """Función para iterar sobre las filas de un DataFrame y dibujar rectángulos.
+        
+        Parameters:
+        group_df (DataFrame): DataFrame de un grupo específico.
+        # """
+
+        info_img = self.grouped_by_id.get_group(id_imagen)
+
+        boxes=[]
+
+        # Iterar sobre las filas del DataFrame
+        for index, row in info_img.iterrows():
+            # Obtener los valores de las columnas
+            x = row['x']
+            y = row['y']
+            w = row['w']
+            h = row['h']
+            
+            xmin = x
+            ymin = y
+            xmax = x + w
+            ymax = y + h
+            boxes.append([xmin, ymin, xmax, ymax])
+
+        return boxes
+
+
 
     def __len__(self): #Método que devuelve la longitud del dataset
-        bounding_boxes = pd.read_csv(self.labels_file)
-        # bounding_boxes_grouped = bounding_boxes.groupby("id")
-
-        # Extraer la última palabra de cada fila
-        bounding_boxes_grouped  = bounding_boxes[bounding_boxes["group"] == self.type]
-        bounding_boxes_grouped = bounding_boxes_grouped.groupby("id")
+        return len(self.img_ids)
 
 
 
@@ -79,45 +150,30 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         return len(bounding_boxes_grouped)
     
     def __getitem__(self, idx): #Método que devuelve un item del dataset
-        bounding_boxes = pd.read_csv(self.labels_file)
-        #bounding_boxes_grouped = bounding_boxes.groupby("id")
-
-        # Extraer la última palabra de cada fila
-        bounding_boxes_grouped  = bounding_boxes[bounding_boxes["group"] == self.type]
-        bounding_boxes_grouped = bounding_boxes_grouped.groupby("id")
-
-        #bounding_boxes_grouped["last"] = bounding_boxes_grouped["group"].str.split().str[-1]
-    
-        # Filtrar filas donde la última palabra sea la deseada
-        #bounding_boxes_grouped  = bounding_boxes_grouped[bounding_boxes_grouped["last"] == type]
-
-        img_id = bounding_boxes_grouped.groups.keys()
-        img_id = list(img_id)[idx]
+        img_id = self.img_ids[idx]
         img_name = f"{img_id}.png"
         img_path = os.path.join(self.image_dir, img_name)
-        image = np.array(Image.open(img_path).convert("RGB"))
-        boxes = bounding_boxes_coord(img_id, self.labels_file)
-        boxes = torch.tensor(boxes)
-        labels = torch.ones((boxes.shape[0],), dtype=torch.int64)
-        labels = labels.tolist()
+        image = np.array(Image.open(img_path).convert("RGB")).astype(np.float32) / 255.0
+        boxes = self.bounding_boxes_coord(img_id)
+        boxes = np.array(boxes)
+        labels = np.ones((boxes.shape[0],), dtype=np.long)
+
         target = {} # Información de las cajas
+        target["boxes"] = boxes
+        target["labels"] = labels
 
         if self.transform:
             transformed = self.transform(
                 image=image,
                 bboxes=boxes,
-                category_ids=labels
+                category_ids=labels.tolist()
             )
-
             image = transformed['image']
-            boxes = torch.tensor(transformed["bboxes"], dtype=torch.float32)
-            labels = torch.tensor(transformed["category_ids"], dtype=torch.int64)
-
-        target["boxes"] = boxes
-        target["labels"] = labels    
-
+            target["boxes"] = torch.tensor(transformed["bboxes"], dtype=torch.float32)
+            target["labels"] = torch.tensor(transformed["category_ids"], dtype=torch.int64)
 
         return image, target
+
     
 #_________________________________________________________________________________________________________
 
@@ -129,13 +185,12 @@ def get_train_dataloader(image_directory, bb, batch_size,num_workers, transform=
 
     #dataset = DDSM_CustomDataset(split_csv, root_dir, return_mask= return_mask, patch_sampler = patch_sampler)
     dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = transform, type = "train")
-    print("AQUI------------------------------------------------")
     print(len(dataset))
     dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)))
     # collate_fn --> para que funcionen las listas de diccionarios con los batches 
     return dataloader
 
-def get_test_dataloader(image_directory, bb, batch_size,num_workers):
+def get_test_dataloader(image_directory, bb, batch_size,num_workers, transform=None):
 
     transform = Compose([ToTensorV2()]) # PONER EL TO TENSOR DE ALBUMENTATIONS
 
@@ -145,12 +200,12 @@ def get_test_dataloader(image_directory, bb, batch_size,num_workers):
 
 #_________________________________________________________________________________________________________
 class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automáticamente 
-    def __init__(self, config, transform=None):
+    def __init__(self, config):
 
         super().__init__()
 
         #self.labels_file = get_parameter(config, ['Datamodule', 'train_set','labels_file'])
-        self.transform = transform
+        # self.transform = transform
 
         #self.source_root = get_parameter(config, ['General', 'source_root'], default=None)
         #print(self.source_root)
@@ -159,17 +214,37 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
         self.image_directory = get_parameter(config, ['Datamodule','image_directory'])
         self.bb = get_parameter(config, ['Datamodule','bb'])   
-       
+
+        self.train_transforms = A.Compose([
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(p=0.3),
+            A.Rotate(limit=15, p=0.3),
+            A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=0, p=0.3),
+            A.RandomCrop(width=512, height=512, p=0.3),
+            A.Resize(640, 640), # reducir las dimensiones a la mitad 
+            A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),  # <-- ¡esto es clave!
+            ToTensorV2()
+            ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
+
+        self.val_transforms = A.Compose([
+            A.Resize(640, 640), # reducir las dimensiones a la mitad 
+            A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),  # <-- ¡esto es clave!
+            ToTensorV2()
+            ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
     
     def train_dataloader(self):
         return get_train_dataloader(image_directory=self.image_directory, 
                                     bb=self.bb, 
                                     batch_size=self.batch_size, 
-                                    num_workers=self.num_workers, transform = self.transform) 
-        
+                                    num_workers=self.num_workers, transform = self.train_transforms) 
+    def val_dataloader(self):
+        return get_test_dataloader(image_directory=self.image_directory, 
+                                    bb=self.bb, 
+                                    batch_size=self.batch_size, 
+                                    num_workers=self.num_workers, transform = self.val_transforms) 
     
     def test_dataloader(self):
         return get_test_dataloader(image_directory=self.image_directory, 
                                     bb=self.bb, 
                                     batch_size=self.batch_size, 
-                                    num_workers=self.num_workers, )
+                                    num_workers=self.num_workers, transform = self.val_transforms)

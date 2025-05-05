@@ -45,6 +45,9 @@ def create_callbacks(config):
     callbacks = []
     
     callbacks_dict = get_parameter(config, ["Callbacks"])
+
+    if callbacks_dict is None:
+        return callbacks
     
     for callback_name in callbacks_dict:
         if callback_name == "ModelCheckpoint":
@@ -95,16 +98,6 @@ if __name__ == "__main__":
 
     # Transformaciones para aumentar el dataset
     
-    train_transforms = A.Compose([
-        A.HorizontalFlip(p=0.5),
-        A.RandomBrightnessContrast(p=0.3),
-        A.Rotate(limit=15, p=0.3),
-        A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=0, p=0.3),
-        A.RandomCrop(width=512, height=512, p=0.3),
-        A.Resize(640, 640), # reducir las dimensiones a la mitad 
-        A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),  # <-- ¡esto es clave!
-        ToTensorV2()
-        ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
 
 
 
@@ -112,7 +105,7 @@ if __name__ == "__main__":
     
 
     model = fasterrcnn_resnet50_fpn(num_classes=2, weights_backbone=ResNet50_Weights.IMAGENET1K_V1)
-    data_module = DDSM_DataModule(config=config,transform = train_transforms)
+    data_module = DDSM_DataModule(config=config)
     
     
     #logger = get_logger(config) if args.logger else None
@@ -140,16 +133,18 @@ if __name__ == "__main__":
 
     callbacks = create_callbacks(config)
 
+    trainer_opts = get_parameter(config, ["Trainer"], mode="default", default={})
+
     for cb in callbacks:
         print(cb, type(cb))
 
-    trainer = L.Trainer(
-        max_epochs=1, 
+    trainer = L.Trainer( 
         devices='auto',
         accelerator='gpu',
         default_root_dir='/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/checkpoints/',
         callbacks=callbacks, # aquí se pondrá callbacks = callbacks
         logger=logger,
+        **trainer_opts
     )
 
 

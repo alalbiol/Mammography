@@ -43,6 +43,7 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
         self.validation_step_outputs = [] # añadido último
 
 
+
     def forward(self, x):
         # La salida de la red neuronal es la salida del modelo
         return self.model(x)
@@ -83,29 +84,32 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
     
 
 
-    def on_validation_epoch_end(self, predictions):
+    def on_validation_epoch_end(self):
+       
         metrica = self.map.compute()
+
+        print("métrica", metrica)
         self.log("val_map", metrica["map"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
         self.log("val_precisions", metrica["map_75"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
         self.log("val_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
 
 
-        sample = predictions[0]
-        img = sample["images"][0]
-        gt_boxes = sample["targets"]["boxes"][0]
-        pred_boxes = sample["preds"]["boxes"][0]
+        # sample = predictions[0]
+        # img = sample["images"][0]
+        # gt_boxes = sample["targets"]["boxes"][0]
+        # pred_boxes = sample["preds"]["boxes"][0]
 
-        gt_labels = sample["targets"].get("labels", [None])[0]
-        pred_labels = sample["preds"].get("labels", [None])[0]
+        # gt_labels = sample["targets"].get("labels", [None])[0]
+        # pred_labels = sample["preds"].get("labels", [None])[0]
 
         # Dibujar solo una vez la imagen
-        fig = draw_boxes(img, gt_boxes, gt_labels, color='green')  # GT en verde
-        draw_boxes(img, pred_boxes, pred_labels, color='red')      # Pred en rojo
+        # fig = draw_boxes(img, gt_boxes, gt_labels, color='green')  # GT en verde
+        # draw_boxes(img, pred_boxes, pred_labels, color='red')      # Pred en rojo
 
-        plt.title(f"Validation Epoch {self.current_epoch}")
-        plt.show()
-        plt.close(fig)
-        self.logger.experiment.log({"validation_image": wandb.Image(fig)})
+        # plt.title(f"Validation Epoch {self.current_epoch}")
+        # plt.show()
+        # plt.close(fig)
+        # self.logger.experiment.log({"validation_image": wandb.Image(fig)}) # cambiar el fig por img
 
         self.map.reset()
 

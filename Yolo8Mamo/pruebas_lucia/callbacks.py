@@ -226,6 +226,22 @@ class VisualizeBatchPatchesCallback(Callback):
         
         return super().on_validation_epoch_start(trainer, pl_module)
     
+
+    
+    def on_validation_epoch_end(self, trainer, pl_module):
+        val_dataloader = trainer.val_dataloaders
+        batch = next(iter(val_dataloader))
+        
+        # Generas la imagen igual que al principio
+        img = show_batch_patch(batch, num_rows=self.num_rows, bb=self.labels_file)
+        
+        # Log a W&B
+        experiment = trainer.logger.experiment
+        experiment.log({"validation batch end": wandb.Image(img)})
+        
+        return super().on_validation_epoch_end(trainer, pl_module)
+
+    
 # class VisualizeBatchImagesCallback(Callback):
 #     def __init__(self, num_rows = 2):
 #         super().__init__()

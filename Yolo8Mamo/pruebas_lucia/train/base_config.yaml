@@ -3,6 +3,23 @@ General:
   gpu_type: "RTX 3090" 
 
 Datamodule:
+  Transforms:
+    p_horizontal_flip: 0.5
+    p_vertical_flip: 0.5
+    p_random_brightness_contrast: 0.3
+    p_rotate: 0.3
+    limit_rotate: 15
+    shift_limit: 0.05
+    scale_limit: 0.05
+    rotate_limit: 0
+    p_scale_rotate: 0.3
+    width_random_crop: 512
+    height_random_crop: 512
+    p_random_crop: 0.3
+    resize_horizontal: 640
+    resize_vertical: 640
+
+
  #patch_size: 1792
  # Esto lo tengo que poner???????????? convert_to_rgb: True
 
@@ -13,7 +30,8 @@ Datamodule:
   # eval_patches_root: resources/DDSM_test.csv
     # Lo de aquí arriba no sé si está bien
   labels_file: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv 
-  batch_size: 4
+  # batch_size: 4
+  batch_size: 1
   num_workers: 16
   pin_memory: True
   #subset_size_train: 1000
@@ -40,6 +58,7 @@ LightningModule:
 
 Trainer:
   max_epochs: 200
+  limit_train_batches: 20
 
 
 
