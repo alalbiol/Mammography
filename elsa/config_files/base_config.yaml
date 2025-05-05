@@ -7,11 +7,11 @@ Datamodule:
   batch_size: 35
   num_workers: 16
   train_set:
-    convert_to_rgb: True
-    split_csv: resources/ddsm/DDSM_train.csv
-    ddsm_annotations: resources/ddsm/ddsm_annotations.json.gz
-    patch_size: 224
     ddsm_root: /home/Data/mamo/DDSM_png_16bit_1120x896 # he cambiado DDSM_png_1152x896 a DDSM_png_16bit_1120x896
+    split_csv: resources/ddsm/DDSM_train.csv
+    ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+    convert_to_rgb: True
+    patch_size: 224
     pin_memory: True
     include_normals: False
 
@@ -26,7 +26,7 @@ Logger:
   type: wandb
   project: ddsm_patch
   name: patches_224
-  save_dir: /tmp/logs/ddsm_patch_224
+  save_dir: /home/eblanov/tmp/logs/ddsm_patch_224
 
 LightningModule:
   model_name: resnet18

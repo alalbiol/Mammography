@@ -4,7 +4,7 @@ Datamodule:
 
 Logger:
   name: model_resnet50_224_wo_normals
-  save_dir: /tmp/logs/model_resnet50_224
+  save_dir: /home/eblanov/tmp/logs/model_resnet50_224
 
 
 LightningModule:

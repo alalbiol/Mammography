@@ -3,7 +3,7 @@ Datamodule:
 
 Logger:
   name: model_resnet50_bn_224
-  save_dir: /tmp/logs/model_resnet50_224
+  save_dir: /home/eblanov/tmp/logs/model_resnet50_224
 
 
 LightningModule:
@@ -12,4 +12,4 @@ LightningModule:
 
 Callbacks:
   ModelCheckpoint:
-    dirpath: /tmp/logs/model_resnet50_224
+    dirpath: /home/eblanov/tmp/logs/model_resnet50_224
