@@ -80,28 +80,6 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         self.bounding_boxes = pd.read_csv(self.labels_file)
         self.grouped_by_id = self.bounding_boxes[self.bounding_boxes["group"] == self.type].groupby("id")
 
-        # print(self.grouped_by_id.head())
-
-        # for img_id, group in self.grouped_by_id:
-        #     if len(group) == 0:
-        #         print(f"Warning: No bounding boxes found for image ID {img_id} in group {self.type}.")
-        #         continue
-        #     elif len(group) > 1:
-        #         print(f"Warning: More than one bounding box found for image ID {img_id} in group {self.type}.")
-        #         # Optionally, you can choose to handle this case differently
-        #         # For example, you might want to raise an error or take the first bounding box
-        #         # raise ValueError(f"Multiple bounding boxes found for image ID {img_id} in group {self.type}.")
-        #         # Or just skip it
-        #         print(img_id, group)
-
-        #         print("boxes")
-        #         print(self.bounding_boxes_coord(img_id))
-        #         sys.exit()
-        #     else:
-        #         continue
-
-
-        # sys.exit()
 
         self.img_ids = list(self.grouped_by_id.groups.keys())
 
@@ -153,7 +131,10 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         img_id = self.img_ids[idx]
         img_name = f"{img_id}.png"
         img_path = os.path.join(self.image_dir, img_name)
-        image = np.array(Image.open(img_path).convert("RGB")).astype(np.float32) / 255.0
+        image = np.array(Image.open(img_path)).astype(np.float32)
+        image= convert_16bit_to_8bit(image)  # Convertir a 8 bits
+        image = np.expand_dims(image, axis=-1)
+        image = np.repeat(image, 3, axis=-1)  # Convertir a 3 canales
         boxes = self.bounding_boxes_coord(img_id)
         boxes = np.array(boxes)
         labels = np.ones((boxes.shape[0],), dtype=np.long)
@@ -186,17 +167,32 @@ def get_train_dataloader(image_directory, bb, batch_size,num_workers, transform=
     #dataset = DDSM_CustomDataset(split_csv, root_dir, return_mask= return_mask, patch_sampler = patch_sampler)
     dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = transform, type = "train")
     print(len(dataset))
-    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)))
+    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)), shuffle=True) # shuffle --> para que los batches sean aleatorios
     # collate_fn --> para que funcionen las listas de diccionarios con los batches 
     return dataloader
 
 def get_test_dataloader(image_directory, bb, batch_size,num_workers, transform=None):
-
-    transform = Compose([ToTensorV2()]) # PONER EL TO TENSOR DE ALBUMENTATIONS
-
     dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = transform, type = "test")
-    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)))
+    dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)), shuffle=True)
     return dataloader
+
+
+def convert_16bit_to_8bit(image_16bit):
+    """Convierte una imagen de 16 bits (NumPy array) a 8 bits."""
+    min_16bit = image_16bit.min()
+    max_16bit = image_16bit.max()
+
+    if max_16bit > min_16bit:
+        # Escalar al rango 0-1
+        image_scaled = (image_16bit - min_16bit) / (max_16bit - min_16bit)
+
+        # Escalar al rango 0-255 y convertir a uint8
+        image_8bit = (image_scaled * 255).astype(np.uint8)
+    else:
+        # Si todos los valores son iguales, crear una imagen de 8 bits con ese valor (o 0)
+        image_8bit = np.full_like(image_16bit, 0, dtype=np.uint8)
+
+    return image_8bit
 
 #_________________________________________________________________________________________________________
 class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automáticamente 
@@ -220,15 +216,15 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
             A.RandomBrightnessContrast(p=0.3),
             A.Rotate(limit=15, p=0.3),
             A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=0, p=0.3),
-            A.RandomCrop(width=512, height=512, p=0.3),
+            #A.RandomCrop(width=512, height=512, p=0.3),
             A.Resize(640, 640), # reducir las dimensiones a la mitad 
-            A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),  # <-- ¡esto es clave!
+            A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
             ToTensorV2()
             ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
 
         self.val_transforms = A.Compose([
             A.Resize(640, 640), # reducir las dimensiones a la mitad 
-            A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),  # <-- ¡esto es clave!
+            A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
             ToTensorV2()
             ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
     

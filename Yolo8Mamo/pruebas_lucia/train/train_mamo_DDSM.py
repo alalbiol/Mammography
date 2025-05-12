@@ -51,14 +51,15 @@ def create_callbacks(config):
     
     for callback_name in callbacks_dict:
         if callback_name == "ModelCheckpoint":
-            from pytorch_lightning.callbacks import ModelCheckpoint
+            pass
+            #from pytorch_lightning.callbacks import ModelCheckpoint
             callbacks.append(ModelCheckpoint(**callbacks_dict[callback_name]))
         # elif callback_name == "LearningRateMonitor":
         #     from pytorch_lightning.callbacks import LearningRateMonitor
         #     callbacks.append(LearningRateMonitor(**callbacks_dict[callback_name]))
-        elif callback_name == "VisualizeBatchPatches":
-            from callbacks import VisualizeBatchPatchesCallback
-            callbacks.append(VisualizeBatchPatchesCallback(**callbacks_dict[callback_name]))
+        elif callback_name == "VisualizeBatchImagesCallback":
+            from callbacks import VisualizeBatchImagesCallback
+            callbacks.append(VisualizeBatchImagesCallback(**callbacks_dict[callback_name]))
 
         else:
             raise NotImplementedError(f"Unknown callback {callback_name}")
@@ -123,13 +124,13 @@ if __name__ == "__main__":
     Lmodel = DDSM_CustomModel(model)
 
     # En principio esto quedará sustituido por la línea  callbacks = create_callbacks(config)
-    checkpoint_callback = ModelCheckpoint( # Para que guarde las tres mejores épocas 
-        monitor='train_loss_epoch',
-        dirpath='/home/lloprib/',
-        filename='mamo-{epoch:02d}-{train_loss_epoch:.2f}',
-        save_top_k=3,
-        mode='max',
-    )
+    # checkpoint_callback = ModelCheckpoint( # Para que guarde las tres mejores épocas 
+    #     monitor='train_loss_epoch',
+    #     dirpath='/home/lloprib/',
+    #     filename='mamo-{epoch:02d}-{train_loss_epoch:.2f}',
+    #     save_top_k=3,
+    #     mode='max',
+    # )
 
     callbacks = create_callbacks(config)
 
@@ -141,13 +142,11 @@ if __name__ == "__main__":
     trainer = L.Trainer( 
         devices='auto',
         accelerator='gpu',
-        default_root_dir='/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/checkpoints/',
+        default_root_dir='/home/lloprib/model_checkpoints',
         callbacks=callbacks, # aquí se pondrá callbacks = callbacks
         logger=logger,
         **trainer_opts
     )
-
-
 
     trainer.fit(Lmodel, data_module)
     #trainer.test(Lmodel, data_module)

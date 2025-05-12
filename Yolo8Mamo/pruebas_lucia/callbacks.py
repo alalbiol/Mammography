@@ -1,5 +1,5 @@
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import Callback
+import lightning as L
+from lightning.pytorch.callbacks import Callback
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,60 +8,6 @@ import pathlib
 import pandas as pd
 from PIL import Image
 
-# ----------------------------------------------------------------------------------------------
-
-def show_mask_boundingbox(image_path, bb, ax = None):
-    if isinstance(image_path, (pathlib.Path, str)):
-        image_path = str(image_path)
-
-
-        img = np.array(Image.open(image_path))
-    else: #ndarray
-        img = image_path
-
-    bounding_boxes = pd.read_csv(bb)
-    nombre_img = f"{img}.png"  # Concatenar la extensión
-    bounding_boxes_grouped = bounding_boxes.groupby("id")
-    group_df = bounding_boxes_grouped.get_group(nombre_img)
-
-    boxes=[]
-
-    # Iterar sobre las filas del DataFrame
-    for index, row in group_df.iterrows():
-        # Obtener los valores de las columnas
-        x = row['x']
-        y = row['y']
-        w = row['w']
-        h = row['h']
-        
-        xmin = x
-        ymin = y
-        xmax = x + w
-        ymax = y + h
-        boxes.append([xmin, ymin, xmax, ymax])
-
-        lado1 = np.array([xmax-xmin, 0])  # Vector para el ancho (horizontal)
-        lado2 = np.array([0, ymax-ymin])  # Vector para la altura (vertical)
-        origen = np.array([xmin, ymin])  # Origen del rectángulo
-        # Calcular las otras tres esquinas del rectángulo
-        esquina1 = origen
-        esquina2 = origen + lado1
-        esquina3 = origen + lado1 + lado2
-        esquina4 = origen + lado2
-        x_values = [esquina1[0], esquina2[0], esquina3[0], esquina4[0], esquina1[0]]
-        y_values = [esquina1[1], esquina2[1], esquina3[1], esquina4[1], esquina1[1]]
-
-
-    # create overlay image, with mask semi-transparent in red
-    if ax is None:
-        plt.imshow(img, cmap='gray')
-        plt.plot(x_values, y_values, 'r-')
-        plt.axis('off')
-        plt.show()
-    else:
-        ax.imshow(img, cmap='gray')
-      #  ax.imshow(color_mask, alpha=0.4)
-        ax.axis('off')
 
 
 # ----------------------------------------------------------------------------------------------
@@ -109,102 +55,69 @@ def fig2img ( fig, close_fig = True ):
     return image
 
 # ----------------------------------------------------------------------------------------------
+def show_box_image(image_path, box_path,ax = None, title = None):
+    img=image_path
+    box=box_path['boxes'].numpy()[0]
+    
+    if ax is None:
+        plt.imshow(img)
+        plot_bbox(box)
+        plt.axis('off')
+        if title is not None:
+            plt.title(title)
+    else:
+        ax.imshow(img)
+        plot_bbox(box)
+        ax.axis('off')
+        if title is not None:
+            ax.set_title(title)
+# ----------------------------------------------------------------------------------------------
+def show_batch_ddsm(batch, num_rows=1):
+    images, boxes = batch
 
+    fig, axs = plt.subplots(num_rows, 1, figsize=(8, 4 * num_rows))
 
-def show_batch_patch(batch, num_rows=2, bb=None):
+    if num_rows == 1:
+        axs = [axs]  # para que axs sea iterable
 
-    labels = batch[1].numpy()
-    background_idx = np.where(labels == 0)[0]
-    cancer_idx = np.where(labels == 1)[0]
+    for row in range(num_rows):
+        if row < len(images):
+            image = images[row][0]  # suponemos que es 1 canal (CxHxW)
+            box = boxes[row]
+        else:
+            # Relleno en caso de que pidamos más filas de las que hay en el batch
+            image = np.zeros((640, 640))
+            box = {'boxes': torch.zeros((0, 4)), 'labels': torch.zeros((0,))}
 
-    fig, axs = plt.subplots(num_rows, 2, figsize=(20, 5))
-
-    for k in range(len(batch[0])):
-        ax = axs[k // 2, k % 2] if num_rows > 1 else axs[k]
-        image = batch[0][k].numpy()[0]
-        show_mask_boundingbox(image, bb, ax=ax)
-
-
-    # for row in range(num_rows):
-    #     if row < len(background_idx):
-    #         k = background_idx[row]
-    #         image = batch[0][k].numpy()[0]
-    #         mask = batch[2][k].numpy()
-    #     else:
-    #         image = np.zeros((224, 224))
-    #         mask = np.zeros((224, 224))
-    #         mask[60:120,60:120]=1
-            
-    #     show_mask_boundingbox(image, bb)
-        
-    #     if row < len(cancer_idx):
-    #         k = cancer_idx[row]
-    #         image = batch[0][k].numpy()[0]
-    #         mask = batch[2][k].numpy()
-    #     else:
-    #         image = np.zeros((224, 224))
-    #         mask = np.zeros((224, 224))
-    #         mask[60:120,60:120]=1
-        
-    #     show_mask_boundingbox(image, bb)
-        
-    #     fig.suptitle("mean = {:.2f}, std = {:.2f}".format(batch[0].mean(), batch[0].std()))
+        show_box_image(image, box, ax=axs[row])
     
     return fig2img(fig)
 
-# ----------------------------------------------------------------------------------------------     
-        
-# def show_batch_ddsm(batch, num_rows=2):
-#     labels = batch[1].numpy()
-#     normal_idx = np.where(labels == 0)[0]
-#     cancer_idx = np.where(labels == 1)[0]
-
-#     fig, axs = plt.subplots(num_rows, 2, figsize=(10, 15))
-
-#     for row in range(num_rows):
-#         if row < len(normal_idx):
-#             k = normal_idx[row]
-#             image = batch[0][k].numpy()[0]
-#             mask = batch[2][k].numpy()
-#         else:
-#             image = np.zeros((224, 224))
-#             mask = np.zeros((224, 224))
-#             mask[60:120,60:120]=1
-            
-#         show_mask_image(image, mask, ax=axs[row, 0], title='normal', multi_label=True)
-        
-#         if row < len(cancer_idx):
-#             k = cancer_idx[row]
-#             image = batch[0][k].numpy()[0]
-#             mask = batch[2][k].numpy()
-#         else:
-#             image = np.zeros((224, 224))
-#             mask = np.zeros((224, 224))
-#             mask[60:120,60:120]=1
-        
-#         show_mask_image(image, mask, ax=axs[row, 1], title='cancer', multi_label=True)
-        
-#         fig.suptitle("mean = {:.2f}, std = {:.2f}".format(batch[0].mean(), batch[0].std()))
+# ----------------------------------------------------------------------------------------------
+def plot_bbox(box):
     
-#     return fig2img(fig)
-                 
+    xmin, ymin, xmax, ymax = box   
+        
+    # Dibujar el rectángulo
+    plt.plot([xmin, xmax, xmax, xmin, xmin], [ymin, ymin, ymax, ymax, ymin], 'r')
+
 # ----------------------------------------------------------------------------------------------
 
-class VisualizeBatchPatchesCallback(Callback):
-    def __init__(self, num_rows = 2, labels_file=None): # número de filas
+
+class VisualizeBatchImagesCallback(Callback):
+    def __init__(self, num_rows = 2):
         super().__init__()
         self.num_rows = num_rows
-        self.labels_file = labels_file # path a los bounding boxes
 
     def on_train_epoch_start(self, trainer, pl_module):
         # Get the first batch from the training dataloader
         train_dataloader = trainer.train_dataloader
         
         batch = next(iter(train_dataloader))
-        #images, labels, masks = batch
+        #images, labels, boxs = batch
         
         # Show the batch
-        img = show_batch_patch(batch, num_rows=self.num_rows, bb=self.labels_file) # Tengo que cambiar el yaml 
+        img = show_batch_ddsm(batch, num_rows=self.num_rows)
         experiment = trainer.logger.experiment
         experiment.log({"training batch": wandb.Image(img)})
         
@@ -216,9 +129,9 @@ class VisualizeBatchPatchesCallback(Callback):
         # Get the first batch from the validation dataloader
         val_dataloader = trainer.val_dataloaders
         batch = next(iter(val_dataloader))
-        #images, labels, masks = batch
+        #images, labels, boxs = batch
         
-        img = show_batch_patch(batch, num_rows=self.num_rows, bb=self.labels_file) # Tengo que cambiar el yaml
+        img = show_batch_ddsm(batch, num_rows=self.num_rows)
         experiment = trainer.logger.experiment
         experiment.log({"validation batch": wandb.Image(img)})
         
@@ -226,56 +139,6 @@ class VisualizeBatchPatchesCallback(Callback):
         
         return super().on_validation_epoch_start(trainer, pl_module)
     
-
-    
-    def on_validation_epoch_end(self, trainer, pl_module):
-        val_dataloader = trainer.val_dataloaders
-        batch = next(iter(val_dataloader))
-        
-        # Generas la imagen igual que al principio
-        img = show_batch_patch(batch, num_rows=self.num_rows, bb=self.labels_file)
-        
-        # Log a W&B
-        experiment = trainer.logger.experiment
-        experiment.log({"validation batch end": wandb.Image(img)})
-        
-        return super().on_validation_epoch_end(trainer, pl_module)
-
-    
-# class VisualizeBatchImagesCallback(Callback):
-#     def __init__(self, num_rows = 2):
-#         super().__init__()
-#         self.num_rows = num_rows
-
-#     def on_train_epoch_start(self, trainer, pl_module):
-#         # Get the first batch from the training dataloader
-#         train_dataloader = trainer.train_dataloader
-        
-#         batch = next(iter(train_dataloader))
-#         #images, labels, masks = batch
-        
-#         # Show the batch
-#         img = show_batch_ddsm(batch, num_rows=self.num_rows)
-#         experiment = trainer.logger.experiment
-#         experiment.log({"training batch": wandb.Image(img)})
-        
-        
-#         return super().on_train_epoch_start(trainer, pl_module)
-        
-        
-#     def on_validation_epoch_start(self, trainer, pl_module):
-#         # Get the first batch from the validation dataloader
-#         val_dataloader = trainer.val_dataloaders
-#         batch = next(iter(val_dataloader))
-#         #images, labels, masks = batch
-        
-#         img = show_batch_ddsm(batch, num_rows=self.num_rows)
-#         experiment = trainer.logger.experiment
-#         experiment.log({"validation batch": wandb.Image(img)})
-        
-        
-        
-#         return super().on_validation_epoch_start(trainer, pl_module)
 
 
 

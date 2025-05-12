@@ -59,7 +59,8 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
 
         losses = sum(loss for loss in loss_dict.values())
 
-        self.log('train_loss', losses, on_epoch=True, prog_bar=True, batch_size=4, logger=True) # Sacamos por pantalla la pérdida
+        self.log('train_loss', losses, on_epoch=True, prog_bar=True, batch_size=4, logger=True, on_step=False)
+        #on_step = False para que el eje de abscisas de wandb aparezcan las épocas # Sacamos por pantalla la pérdida
 
         return losses
     
@@ -67,14 +68,15 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
         images, targets = batch
 
         images = list(image for image in images)
+
         targets = [{k: v for k, v in t.items()} for t in targets]
 
         predictions = self.model(images)
         self.map.update(predictions, targets)
 
-        output = {"images": images, "targets": targets, "preds": predictions} # añadido último
-        self.validation_step_outputs.append(output) # añadido último
-        return output # añadido último
+        # output = {"images": images, "targets": targets, "preds": predictions} # añadido último
+        # self.validation_step_outputs.append(output) # añadido último
+        # return output # añadido último
 
         # return {
         #     "images": images,
@@ -87,29 +89,9 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
     def on_validation_epoch_end(self):
        
         metrica = self.map.compute()
-
-        print("métrica", metrica)
         self.log("val_map", metrica["map"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
         self.log("val_precisions", metrica["map_75"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
         self.log("val_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
-
-
-        # sample = predictions[0]
-        # img = sample["images"][0]
-        # gt_boxes = sample["targets"]["boxes"][0]
-        # pred_boxes = sample["preds"]["boxes"][0]
-
-        # gt_labels = sample["targets"].get("labels", [None])[0]
-        # pred_labels = sample["preds"].get("labels", [None])[0]
-
-        # Dibujar solo una vez la imagen
-        # fig = draw_boxes(img, gt_boxes, gt_labels, color='green')  # GT en verde
-        # draw_boxes(img, pred_boxes, pred_labels, color='red')      # Pred en rojo
-
-        # plt.title(f"Validation Epoch {self.current_epoch}")
-        # plt.show()
-        # plt.close(fig)
-        # self.logger.experiment.log({"validation_image": wandb.Image(fig)}) # cambiar el fig por img
 
         self.map.reset()
 
@@ -118,21 +100,6 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
     # self.validation_step_outputs.clear()
 
 # --------------------------------------------------------------------------
-
-    #def test_step(self, batch, batch_idx): # Qué tiene que hacer la red por cada batch de test
-        #images, targets = batch
-        #images=list(image for image in images)
-        #targets = [{k: v for k, v in t.items()} for t in targets]
-        #predictions = self.model(images) # Al solo pasar imagenes me saca las predicciones
-        #self.map_test.update(predictions, targets)
-
-    #def on_test_epoch_end(self):
-        #metrica = self.map_test.compute()
-        #self.log("test_map", metrica["map"], on_epoch=True, prog_bar=True)
-        #self.log("test_precisions", metrica["map_75"], on_epoch=True, prog_bar=True)
-        #self.log("test_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True)
-        #self.map_test.reset()
-
 
     def on_epoch_end(self):
         if self.current_epoch % 1 == 0:
