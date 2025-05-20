@@ -28,6 +28,9 @@ from torchmetrics.detection.mean_ap import MeanAveragePrecision
 import argparse
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from torchvision.models.detection.anchor_utils import AnchorGenerator
+
+
 
 
 sys.path.append("..")
@@ -52,11 +55,7 @@ def create_callbacks(config):
     for callback_name in callbacks_dict:
         if callback_name == "ModelCheckpoint":
             pass
-            #from pytorch_lightning.callbacks import ModelCheckpoint
             callbacks.append(ModelCheckpoint(**callbacks_dict[callback_name]))
-        # elif callback_name == "LearningRateMonitor":
-        #     from pytorch_lightning.callbacks import LearningRateMonitor
-        #     callbacks.append(LearningRateMonitor(**callbacks_dict[callback_name]))
         elif callback_name == "VisualizeBatchImagesCallback":
             from callbacks import VisualizeBatchImagesCallback
             callbacks.append(VisualizeBatchImagesCallback(**callbacks_dict[callback_name]))
@@ -104,8 +103,18 @@ if __name__ == "__main__":
 
     logger=WandbLogger(project='Mamo')
     
+      
+    anchor_generator = AnchorGenerator(sizes=((8,),(16,), (32,), (64,), (128,)), aspect_ratios=((0.5, 1.0, 2.0),)*5)
 
-    model = fasterrcnn_resnet50_fpn(num_classes=2, weights_backbone=ResNet50_Weights.IMAGENET1K_V1)
+    model = fasterrcnn_resnet50_fpn(num_classes=2, weights_backbone=ResNet50_Weights.IMAGENET1K_V1, rpn_positive_iou_thresh=0.5,  # umbral para positivas
+    rpn_negative_iou_thresh=0.3,  # umbral para negativas
+    #rpn_anchor_generator = anchor_generator
+    )
+  
+    
+
+# Iterar en el dataset y calclar un histograma de tamaños con ancho, alto y relación de aspecto
+
     data_module = DDSM_DataModule(config=config)
     
     
@@ -122,15 +131,6 @@ if __name__ == "__main__":
     #print("Trainer kwargs: ", trainer_kwargs)
     
     Lmodel = DDSM_CustomModel(model)
-
-    # En principio esto quedará sustituido por la línea  callbacks = create_callbacks(config)
-    # checkpoint_callback = ModelCheckpoint( # Para que guarde las tres mejores épocas 
-    #     monitor='train_loss_epoch',
-    #     dirpath='/home/lloprib/',
-    #     filename='mamo-{epoch:02d}-{train_loss_epoch:.2f}',
-    #     save_top_k=3,
-    #     mode='max',
-    # )
 
     callbacks = create_callbacks(config)
 

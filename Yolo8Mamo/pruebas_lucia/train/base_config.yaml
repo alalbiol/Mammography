@@ -57,7 +57,7 @@ LightningModule:
     min_lr: 1.e-8
 
 Trainer:
-  max_epochs: 50
+  max_epochs: 100
   #limit_train_batches: 20
 
 

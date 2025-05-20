@@ -38,8 +38,8 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
     def __init__(self, model):
         super(DDSM_CustomModel, self).__init__()
         self.model = model
-        self.map_test=MeanAveragePrecision(iou_type="bbox", extended_summary=True, class_metrics=True)
-        self.map=MeanAveragePrecision(iou_type="bbox", extended_summary=True, class_metrics=True)
+        self.map_test=MeanAveragePrecision(iou_type="bbox", extended_summary=True, class_metrics=False, iou_thresholds=[0.5], average='macro')
+        self.map=MeanAveragePrecision(iou_type="bbox", extended_summary=True, class_metrics=False, iou_thresholds=[0.5], average='macro')
         self.validation_step_outputs = [] # añadido último
 
 
@@ -74,30 +74,16 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
         predictions = self.model(images)
         self.map.update(predictions, targets)
 
-        # output = {"images": images, "targets": targets, "preds": predictions} # añadido último
-        # self.validation_step_outputs.append(output) # añadido último
-        # return output # añadido último
-
-        # return {
-        #     "images": images,
-        #     "targets": targets,
-        #     "preds": predictions
-        # }
-    
 
 
     def on_validation_epoch_end(self):
        
         metrica = self.map.compute()
         self.log("val_map", metrica["map"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
-        self.log("val_precisions", metrica["map_75"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
-        self.log("val_recall", metrica["mar_100_per_class"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
+        self.log("val_precisions", metrica["precision"][0,70,0,0,1], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
+        self.log("val_recall", metrica["recall"][0,0,0,1], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
 
         self.map.reset()
-
-    #         for sample in self.validation_step_outputs:
-    #     ...
-    # self.validation_step_outputs.clear()
 
 # --------------------------------------------------------------------------
 

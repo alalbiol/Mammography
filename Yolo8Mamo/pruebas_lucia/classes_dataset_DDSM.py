@@ -19,7 +19,7 @@ from albumentations import Compose, Resize, Normalize
 from albumentations.pytorch import ToTensorV2
 
 
-# ___________________ESTO ESTÁ BIEN________________________________________________________________________________________
+# ______________________________________________________________ESTO ESTÁ BIEN_____________________________________________________________
 
 import pandas as pd
 import os
@@ -79,9 +79,22 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
 
         self.bounding_boxes = pd.read_csv(self.labels_file)
         self.grouped_by_id = self.bounding_boxes[self.bounding_boxes["group"] == self.type].groupby("id")
+        
 
 
         self.img_ids = list(self.grouped_by_id.groups.keys())
+
+        group_sizes = self.grouped_by_id.size()
+        # Ahora hacemos un histograma de los tamaños de grupo
+        plt.figure(figsize=(8, 5))
+        group_sizes.value_counts().sort_index().plot(kind='bar')
+
+        plt.xlabel('Tamaño del grupo')
+        plt.ylabel('Número de grupos')
+        plt.title('Histograma del tamaño de los grupos por id')
+        plt.grid(axis='y')
+        plt.tight_layout()
+        plt.savefig('histograma_tamaño_grupos.png') # porque en .py no representa por estar usando el alien
 
 
 
@@ -118,13 +131,6 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
     def __len__(self): #Método que devuelve la longitud del dataset
         return len(self.img_ids)
 
-
-
-        #bounding_boxes_grouped["last"] = bounding_boxes_grouped["group"].str.split().str[-1]
-    
-        # Filtrar filas donde la última palabra sea la deseada
-        #bounding_boxes_grouped  = bounding_boxes_grouped[bounding_boxes_grouped["last"] == type]
-
         return len(bounding_boxes_grouped)
     
     def __getitem__(self, idx): #Método que devuelve un item del dataset
@@ -153,6 +159,7 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
             target["boxes"] = torch.tensor(transformed["bboxes"], dtype=torch.float32)
             target["labels"] = torch.tensor(transformed["category_ids"], dtype=torch.int64)
 
+
         return image, target
 
     
@@ -179,32 +186,29 @@ def get_test_dataloader(image_directory, bb, batch_size,num_workers, transform=N
 
 def convert_16bit_to_8bit(image_16bit):
     """Convierte una imagen de 16 bits (NumPy array) a 8 bits."""
-    min_16bit = image_16bit.min()
-    max_16bit = image_16bit.max()
+
+
+    min_16bit = np.min(image_16bit)
+    max_16bit = np.max(image_16bit)
+
 
     if max_16bit > min_16bit:
         # Escalar al rango 0-1
         image_scaled = (image_16bit - min_16bit) / (max_16bit - min_16bit)
 
         # Escalar al rango 0-255 y convertir a uint8
-        image_8bit = (image_scaled * 255).astype(np.uint8)
+        image_scaled = (image_scaled ).astype(np.float32)
     else:
         # Si todos los valores son iguales, crear una imagen de 8 bits con ese valor (o 0)
-        image_8bit = np.full_like(image_16bit, 0, dtype=np.uint8)
+        image_scaled = np.full_like(image_16bit, 0, dtype=np.float32)
 
-    return image_8bit
+    return image_scaled
 
 #_________________________________________________________________________________________________________
 class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automáticamente 
     def __init__(self, config):
 
         super().__init__()
-
-        #self.labels_file = get_parameter(config, ['Datamodule', 'train_set','labels_file'])
-        # self.transform = transform
-
-        #self.source_root = get_parameter(config, ['General', 'source_root'], default=None)
-        #print(self.source_root)
         
         self.batch_size = get_parameter(config, ['Datamodule',  'batch_size'])
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
@@ -214,17 +218,17 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
         self.train_transforms = A.Compose([
             A.HorizontalFlip(p=0.5),
             A.RandomBrightnessContrast(p=0.3),
-            A.Rotate(limit=15, p=0.3),
+            A.Rotate(limit=35, p=0.3),
             A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=0, p=0.3),
-            #A.RandomCrop(width=512, height=512, p=0.3),
-            A.Resize(640, 640), # reducir las dimensiones a la mitad 
-            A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
+            A.RandomCrop(width=512, height=512, p=0.3),
+            A.Resize(2240, 1792), # reducir las dimensiones a la mitad 
+            #A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
             ToTensorV2()
             ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
 
         self.val_transforms = A.Compose([
-            A.Resize(640, 640), # reducir las dimensiones a la mitad 
-            A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
+            A.Resize(2240, 1792), # reducir las dimensiones a la mitad 
+            #A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
             ToTensorV2()
             ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
     
