@@ -61,24 +61,27 @@ def show_box_image(image_path, box_path,ax = None, title = None):
     boxes = box_path['boxes'].numpy()
     if boxes.shape[0] > 0:
         box = boxes[0]
+
+        if ax is None:
+            plt.imshow(img,cmap='gray')
+            plt.title(f'M={img.max()}, m={img.min()}')
+            plot_bbox(box)
+            plt.axis('off')
+            if title is not None:
+                plt.title(title)
+        else:
+            ax.imshow(img,cmap='gray')
+            ax.set_title(f'M={img.max()}, m={img.min()}')
+
+
+            plot_bbox(box)
+            ax.axis('off')
+            if title is not None:
+                ax.set_title(title)
     else:
         print("No hay cajas en esta muestra.")
     
-    if ax is None:
-        plt.imshow(img,cmap='gray')
-        plt.title(f'M={img.max()}, m={img.min()}')
-        plot_bbox(box)
-        plt.axis('off')
-        if title is not None:
-            plt.title(title)
-    else:
-        ax.imshow(img,cmap='gray')
-        ax.set_title(f'M={img.max()}, m={img.min()}')
 
-        plot_bbox(box)
-        ax.axis('off')
-        if title is not None:
-            ax.set_title(title)
 # ----------------------------------------------------------------------------------------------
 def show_batch_ddsm(batch, num_rows=1):
     images, boxes = batch

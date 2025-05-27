@@ -80,7 +80,7 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
        
         metrica = self.map.compute()
         self.log("val_map", metrica["map"], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
-        self.log("val_precisions", metrica["precision"][0,70,0,0,1], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
+        self.log("val_precisions", metrica["precision"][0,50,0,0,1], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
         self.log("val_recall", metrica["recall"][0,0,0,1], on_epoch=True, prog_bar=True, logger=True, batch_size=4)
 
         self.map.reset()
@@ -92,6 +92,6 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
             self.trainer.validate(self)
     
     def configure_optimizers(self): # Configuramos el optimizador
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=0.005, weight_decay = 1e-4, momentum=0.9)
+        optimizer = torch.optim.SGD(self.model.parameters(), lr=0.001, weight_decay = 1e-4, momentum=0.9)
         return optimizer
 

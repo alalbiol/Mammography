@@ -220,11 +220,11 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
             A.RandomBrightnessContrast(p=0.3),
             A.Rotate(limit=35, p=0.3),
             A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=0, p=0.3),
-            A.RandomCrop(width=512, height=512, p=0.3),
-            A.Resize(2240, 1792), # reducir las dimensiones a la mitad 
+            #A.RandomSizedBBoxSafeCrop(width=512, height=512, p=0.3, erosion_rate=0.2),
+            #A.Resize(2240, 1792), # reducir las dimensiones a la mitad 
             #A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
             ToTensorV2()
-            ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
+            ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids'], min_visibility = 0.3)) # min_visibility es el porcentaje mínimo de visibilidad de la caja para que se considere válida
 
         self.val_transforms = A.Compose([
             A.Resize(2240, 1792), # reducir las dimensiones a la mitad 

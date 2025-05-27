@@ -104,7 +104,7 @@ if __name__ == "__main__":
     logger=WandbLogger(project='Mamo')
     
       
-    anchor_generator = AnchorGenerator(sizes=((8,),(16,), (32,), (64,), (128,)), aspect_ratios=((0.5, 1.0, 2.0),)*5)
+    anchor_generator = AnchorGenerator(sizes=((12,),(16,), (32,), (64,), (128,), (256,),(512,), (1024,)), aspect_ratios=((0.5, 1.0, 1.5),)*5)
 
     model = fasterrcnn_resnet50_fpn(num_classes=2, weights_backbone=ResNet50_Weights.IMAGENET1K_V1, rpn_positive_iou_thresh=0.5,  # umbral para positivas
     rpn_negative_iou_thresh=0.3,  # umbral para negativas
