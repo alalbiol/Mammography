@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     model = fasterrcnn_resnet50_fpn(num_classes=2, weights_backbone=ResNet50_Weights.IMAGENET1K_V1, rpn_positive_iou_thresh=0.5,  # umbral para positivas
     rpn_negative_iou_thresh=0.3,  # umbral para negativas
-    #rpn_anchor_generator = anchor_generator
+    rpn_anchor_generator = anchor_generator
     )
   
     
@@ -150,6 +150,10 @@ if __name__ == "__main__":
 
     trainer.fit(Lmodel, data_module)
     #trainer.test(Lmodel, data_module)
+
+    output_model_path = "modelo_entrenado.pth"
+    torch.save(Lmodel.state_dict(), output_model_path)
+    print(f"Modelo (solo pesos) guardado en: {output_model_path}")
 
 
     print("Training finished")

@@ -92,6 +92,6 @@ class DDSM_CustomModel(L.LightningModule): # Creamos un modelo propio a partir d
             self.trainer.validate(self)
     
     def configure_optimizers(self): # Configuramos el optimizador
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=0.001, weight_decay = 1e-4, momentum=0.9)
+        optimizer = torch.optim.SGD(self.model.parameters(), lr=0.001, weight_decay = 1e-3, momentum=0.9)
         return optimizer
 

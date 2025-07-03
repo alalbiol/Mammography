@@ -37,36 +37,6 @@ def bounding_boxes_coord(img_id, labels_file):
     return boxes
 
 
-# def bounding_boxes_coord(id_imagen, bb):
-
-#     """Función para iterar sobre las filas de un DataFrame y dibujar rectángulos.
-    
-#     Parameters:
-#     group_df (DataFrame): DataFrame de un grupo específico.
-#     # """
-
-    # bounding_boxes = pd.read_csv(bb)
-    # nombre_img = f"{id_imagen}.png"  # Concatenar la extensión
-    # bounding_boxes_grouped = bounding_boxes.groupby("id")
-    # group_df = bounding_boxes_grouped.get_group(id_imagen)
-
-    # boxes=[]
-
-    # # Iterar sobre las filas del DataFrame
-    # for index, row in group_df.iterrows():
-    #     # Obtener los valores de las columnas
-    #     x = row['x']
-    #     y = row['y']
-    #     w = row['w']
-    #     h = row['h']
-        
-    #     xmin = x
-    #     ymin = y
-    #     xmax = x + w
-    #     ymax = y + h
-    #     boxes.append([xmin, ymin, xmax, ymax])
-
-    # return boxes
 
 # ___________________ESTO ESTÁ BIEN________________________________________________________________________________________
 
@@ -220,7 +190,7 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
             A.RandomBrightnessContrast(p=0.3),
             A.Rotate(limit=35, p=0.3),
             A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=0, p=0.3),
-            #A.RandomSizedBBoxSafeCrop(width=512, height=512, p=0.3, erosion_rate=0.2),
+            A.RandomSizedBBoxSafeCrop(width=512, height=512, p=0.3, erosion_rate=0.2),
             #A.Resize(2240, 1792), # reducir las dimensiones a la mitad 
             #A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
             ToTensorV2()
