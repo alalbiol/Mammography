@@ -10,3 +10,5 @@ mamo_holistic/lightning_logs/*
 */checkpoints/*
 nohup.out
 mamo_seg/lightning_logs/*
+*.def
+*~
