@@ -1,0 +1,76 @@
+# Apptainer Definition File for yadongw/py-faster-rcnn:latest
+#
+# This definition file creates an Apptainer image directly from the
+# yadongw/py-faster-rcnn:latest Docker image. This image is expected to have
+# py-faster-rcnn and its Caffe dependencies already installed and configured.
+#
+# To build this image:
+#   sudo apptainer build py-faster-rcnn-yadongw.sif py-faster-rcnn-yadongw.def
+#
+# To use it (e.g., to extract weights from a model, assuming your model and
+# script are in a directory like /home/user/my_models_and_scripts):
+#   apptainer exec --bind /home/user/my_models_and_scripts:/mnt py-faster-rcnn-yadongw.sif python /mnt/your_extraction_script.py /mnt/your_model.caffemodel
+#
+# To enter the container's shell:
+#   apptainer shell py-faster-rcnn-yadongw.sif
+
+Bootstrap: docker
+From: yadongw/py-faster-rcnn:latest
+
+%environment
+    # The base Docker image should have most necessary environment variables set.
+    # However, it's good practice to ensure Python locale settings are correct.
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    # If you know specific paths from the yadongw image, you can explicitly set them:
+    # export FRCN_ROOT=/path/to/py-faster-rcnn/in/docker # (e.g., /root/py-faster-rcnn)
+    # export PATH=$FRCN_ROOT/caffe-fast-rcnn/build/install/bin:$PATH
+    # export LD_LIBRARY_PATH=$FRCN_ROOT/caffe-fast-rcnn/build/install/lib:$LD_LIBRARY_PATH
+    # export PYTHONPATH=$FRCN_ROOT/lib:$FRCN_ROOT/caffe-fast-rcnn/python:$PYTHONPATH
+
+%post
+    # Since this image is designed to be "off-the-shelf",
+    # the %post section can be minimal or empty.
+    # You might add common utilities if you find them missing and useful for debugging/scripting.
+    echo "--- Installing minimal additional utilities (if not present) ---"
+    apt-get update -y || true # Use || true to prevent build failure if update fails for minor reasons
+    apt-get install -y --no-install-recommends \
+        wget \
+        unzip \
+        zip \
+        # Add 'git' if you plan to clone repos inside the container often
+        # Add 'vim' or 'nano' if you want to edit files directly in the shell
+        # Add 'hdf5-tools' for HDF5 inspection if needed
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+%runscript
+    echo "This Apptainer image is based on yadongw/py-faster-rcnn:latest."
+    echo "It should have py-faster-rcnn and its Caffe dependencies pre-installed."
+    echo ""
+    echo "To run a Python script (e.g., for weight extraction):"
+    echo "  apptainer exec --bind /host/path/to/your_files:/mnt $APPTAINER_CONTAINER python /mnt/your_script.py"
+    echo ""
+    echo "To enter the container's shell for interactive use:"
+    echo "  apptainer shell $APPTAINER_CONTAINER"
+    echo ""
+    echo "The py-faster-rcnn project's location within the container will depend on how"
+    echo "the original Docker image was built (commonly in /root/py-faster-rcnn or /opt/py-faster-rcnn)."
+
+%labels
+    Maintainer "Your Name <your.email@example.com>"
+    Version "1.0"
+    Description "Apptainer image based on yadongw/py-faster-rcnn:latest for Caffe/Faster R-CNN tasks."
+
+%help
+    This Apptainer image provides a pre-configured environment for py-faster-rcnn,
+    derived directly from the `yadongw/py-faster-rcnn:latest` Docker image.
+    It includes the necessary Caffe fork with custom layers (like SmoothL1Loss
+    and ROIPooling) required to load Faster R-CNN models.
+
+    This image is suitable for:
+    - Loading and inspecting .caffemodel files from Faster R-CNN.
+    - Extracting weights and biases.
+    - Running existing py-faster-rcnn scripts.
+
+    When using this image, remember to use bind mounts (`--bind`) to make your
+    local model files and scripts accessible inside the container.
