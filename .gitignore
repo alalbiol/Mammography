@@ -15,3 +15,4 @@ mamo_seg/lightning_logs/*
 *.caffemodel
 *.sif
 *.tgz
+*.npz
