@@ -1,21 +1,24 @@
 
-
+import pathlib
 from PIL import Image
 import numpy as np
 import cv2
 import torch
 import pandas as pd
 import os
+from tqdm import tqdm
 
-from faster_rcnn_vgg16 import FasterRCNN, post_process_detections, load_caffe_weights_into_pytorch
 
+from faster_rcnn_vgg16 import FasterRCNN, post_process_detections, post_process_detections2, load_caffe_weights_into_pytorch
 
+DEBUG = False  # Set to True to enable debug mode
 
 def load_im(filename, target_scale=1700, max_size=2100):
     """Load and preprocess image to match Faster R-CNN cfg.TEST scaling."""
     # Load and convert to float32
     image = np.array(Image.open(filename)).astype(np.float32)
-    print("image max before processing:", image.max())
+    if DEBUG:
+        print("image max before processing:", image.max())
 
     # DDSM-style normalization
     im = image / image.max() * 3.0
@@ -57,86 +60,85 @@ def detect_lesions(filename, model, score_thresh = 0.05,  device='cuda'):
     image, scale = load_im(filename)
     image = torch.as_tensor(image, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0) # to torch tensor, channel first and add batch dim
     
-    print("image max after processing:", image.max())
-    print("image min after processing:", image.min())
-    print("image mean after processing:", image.mean(axis=(0,2,3)))
-    print("image shape after processing:", image.shape)
+    if DEBUG:
+        print("image max after processing:", image.max())
+        print("image min after processing:", image.min())
+        print("image mean after processing:", image.mean(axis=(0,2,3)))
+        print("image shape after processing:", image.shape)
     
     
     image = image.to(device) # move to device
     
     im_info = torch.tensor([[image.shape[2], image.shape[3], scale]], device=device) # height, width, scale
-
     model.eval()  # Set the model to evaluation mode
     
-    activation = {}  # Dictionary to store activations
-    
-    def get_hook(layer_name):
-        hook = lambda module, input, output: activation.update({layer_name: output.detach().cpu()})
-        return hook
-    
-    def get_hook_2(layer_name):
-        hook = lambda module, input, output: activation.update({layer_name: (output[0].detach().cpu(), output[1].detach().cpu())})
-        return hook
+    if DEBUG:
+        activation = {}  # Dictionary to store activations
         
+        def get_hook(layer_name):
+            hook = lambda module, input, output: activation.update({layer_name: output.detach().cpu()})
+            return hook
+        
+        def get_hook_2(layer_name):
+            hook = lambda module, input, output: activation.update({layer_name: (output[0].detach().cpu(), output[1].detach().cpu())})
+            return hook
+            
 
-    # Register hook to conv1_1
-    hook = model.backbone.conv1_1.register_forward_hook(get_hook('conv1_1')) 
-    hook = model.backbone.conv2_2.register_forward_hook(get_hook('conv2_2')) 
-    hook = model.backbone.conv3_3.register_forward_hook(get_hook('conv3_3')) 
-    hook = model.backbone.conv4_3.register_forward_hook(get_hook('conv4_3')) 
-    hook = model.backbone.conv5_3.register_forward_hook(get_hook('conv5_3'))  # Register hook to conv5_3
+        # Register hook to conv1_1
+        hook = model.backbone.conv1_1.register_forward_hook(get_hook('conv1_1')) 
+        hook = model.backbone.conv2_2.register_forward_hook(get_hook('conv2_2')) 
+        hook = model.backbone.conv3_3.register_forward_hook(get_hook('conv3_3')) 
+        hook = model.backbone.conv4_3.register_forward_hook(get_hook('conv4_3')) 
+        hook = model.backbone.conv5_3.register_forward_hook(get_hook('conv5_3'))  # Register hook to conv5_3
 
-    hook = model.rpn.rpn_cls_score.register_forward_hook(get_hook('rpn_cls_score'))  # Register hook to conv5_3
-    hook = model.rpn.rpn_bbox_pred.register_forward_hook(get_hook('rpn_bbox_pred'))  # Register hook to conv5_3
-    hook = model.proposal_layer.register_forward_hook(get_hook_2('rois_scores'))  # Register hook to conv5_3
-    
-    hook = model.rcnn_head.fc6.register_forward_hook(get_hook('fc6'))  # Register hook to conv5_3
+        hook = model.rpn.rpn_cls_score.register_forward_hook(get_hook('rpn_cls_score'))  # Register hook to conv5_3
+        hook = model.rpn.rpn_bbox_pred.register_forward_hook(get_hook('rpn_bbox_pred'))  # Register hook to conv5_3
+        hook = model.proposal_layer.register_forward_hook(get_hook_2('rois_scores'))  # Register hook to conv5_3
+        
+        hook = model.rcnn_head.fc6.register_forward_hook(get_hook('fc6'))  # Register hook to conv5_3
 
-    
-    axis=(0,2,3)
+
     with torch.no_grad():
-        print("im_info:", im_info)
         _, _, cls_score, bbox_pred, rois = model(image, im_info)  # Forward pass
         
+        if DEBUG:
+            print("output of conv1_1.shape", activation['conv1_1'].shape)  # e.g. torch.Size([1, 64, 224, 224])
+            np.save('conv1_1_activations',activation['conv1_1'].detach().cpu().numpy() )
+
+            print("output of conv2_2.shape", activation['conv2_2'].shape)  # e.g. torch.Size([1, 64, 224, 224])
+            np.save('conv2_2_activations',activation['conv2_2'].detach().cpu().numpy() )
+
+            print("output of conv3_3.shape", activation['conv3_3'].shape)  # e.g. torch.Size([1, 64, 224, 224])
+            np.save('conv3_3_activations',activation['conv3_3'].detach().cpu().numpy() )
+
+
+            print("output of conv4_3.shape", activation['conv4_3'].shape)  # e.g. torch.Size([1, 64, 224, 224])
+            np.save('conv4_3_activations',activation['conv4_3'].detach().cpu().numpy() )
+
+
+            print("output of conv5_3.shape", activation['conv5_3'].shape)  # e.g. torch.Size([1, 64, 224, 224])
+            np.save('conv5_3_activations',activation['conv5_3'].detach().cpu().numpy() )
+
+
+            print("output rpn_cls_score.shape", activation['rpn_cls_score'].shape)  # e.g. torch.Size([1, 64, 224, 224])
+            np.save('rpn_cls_score',activation['rpn_cls_score'].detach().cpu().numpy() )
+
+            print("output rpn_bbox_pred.shape", activation['rpn_bbox_pred'].shape)  # e.g. torch.Size([1, 64, 224, 224])
+            np.save('rpn_bbox_pred',activation['rpn_bbox_pred'].detach().cpu().numpy() )
+
+            print("output rois.shape", activation['rois_scores'][0].shape)  # e.g. torch.Size([1, 64, 224, 224])
+            print("output scores.shape", activation['rois_scores'][1].shape)  # e.g. torch.Size([1, 64, 224, 224])
+
+            np.save('rois',activation['rois_scores'][0].detach().cpu().numpy() )
+
+            
+            print(f"cls_score shape: {cls_score.shape}, bbox_pred shape: {bbox_pred.shape}, rois shape: {rois.shape}")
+            
+            np.save('fc6',activation['fc6'].detach().cpu().numpy() )
         
-        print("output of conv1_1.shape", activation['conv1_1'].shape)  # e.g. torch.Size([1, 64, 224, 224])
-        np.save('conv1_1_activations',activation['conv1_1'].detach().cpu().numpy() )
-
-        print("output of conv2_2.shape", activation['conv2_2'].shape)  # e.g. torch.Size([1, 64, 224, 224])
-        np.save('conv2_2_activations',activation['conv2_2'].detach().cpu().numpy() )
-
-        print("output of conv3_3.shape", activation['conv3_3'].shape)  # e.g. torch.Size([1, 64, 224, 224])
-        np.save('conv3_3_activations',activation['conv3_3'].detach().cpu().numpy() )
-
-
-        print("output of conv4_3.shape", activation['conv4_3'].shape)  # e.g. torch.Size([1, 64, 224, 224])
-        np.save('conv4_3_activations',activation['conv4_3'].detach().cpu().numpy() )
-
-
-        print("output of conv5_3.shape", activation['conv5_3'].shape)  # e.g. torch.Size([1, 64, 224, 224])
-        np.save('conv5_3_activations',activation['conv5_3'].detach().cpu().numpy() )
-
-
-        print("output rpn_cls_score.shape", activation['rpn_cls_score'].shape)  # e.g. torch.Size([1, 64, 224, 224])
-        np.save('rpn_cls_score',activation['rpn_cls_score'].detach().cpu().numpy() )
-
-        print("output rpn_bbox_pred.shape", activation['rpn_bbox_pred'].shape)  # e.g. torch.Size([1, 64, 224, 224])
-        np.save('rpn_bbox_pred',activation['rpn_bbox_pred'].detach().cpu().numpy() )
-
-        print("output rois.shape", activation['rois_scores'][0].shape)  # e.g. torch.Size([1, 64, 224, 224])
-        print("output scores.shape", activation['rois_scores'][1].shape)  # e.g. torch.Size([1, 64, 224, 224])
-
-        np.save('rois',activation['rois_scores'][0].detach().cpu().numpy() )
-
-        
-        print(f"cls_score shape: {cls_score.shape}, bbox_pred shape: {bbox_pred.shape}, rois shape: {rois.shape}")
-        
-        np.save('fc6',activation['fc6'].detach().cpu().numpy() )
-       
 
         # Post-process to get detections (you might need to adapt this based on your model's output format)
-        detections = post_process_detections(cls_score, bbox_pred, rois, im_info, num_classes=3, 
+        detections = post_process_detections2(cls_score, bbox_pred, rois, im_info, num_classes=3, 
                                              score_thresh=score_thresh,nms_thresh=0.1)
     return detections
 
@@ -153,7 +155,8 @@ def detect_lesions_in_files(filenames, model, score_thresh = 0.05,  device='cuda
               dictionaries with keys: 'boxes', 'labels', 'scores'.
     """
     all_detections = []
-    for filename in filenames:
+    for filename in tqdm(filenames, desc="Processing images"):
+        tqdm.write(f"Processing {pathlib.Path(filename).name}")
         detections = detect_lesions(filename, model, score_thresh=score_thresh, device=device)
         all_detections.append(detections)
     return all_detections
@@ -191,7 +194,7 @@ def load_faster_rcnn_vgg16_model(model_path="../faster_rcnn_vgg16_weights", devi
     pytorch_model.eval() # Set to evaluation mode for inference
     return pytorch_model
 
-def main(model_path, file_input, score_thresh=0.3):
+def main(model_path, file_input, score_thresh=0.3, outfile="detections.csv"):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = load_faster_rcnn_vgg16_model(model_path)
     model.to(device)
@@ -201,20 +204,37 @@ def main(model_path, file_input, score_thresh=0.3):
         filenames = df['filename'].tolist()
     else:
         filenames = [file_input]
+        
+    num_classes = 3  # Adjust based on your model's output classes
 
     all_detections = detect_lesions_in_files(filenames, model, score_thresh=score_thresh, device= device)
-    for filename, detections in zip(filenames, all_detections):
-        print(f"Detections for {filename}:")
-        for i, detection in enumerate(detections):
-            if len(detection['boxes']) > 0:
-                print(f"  Instance {i + 1}:")
-                for j in range(len(detection['boxes'])):
-                    box = detection['boxes'][j].tolist()
-                    label = detection['labels'][j].item()
-                    score = detection['scores'][j].item()
-                    print(f"    Box: [{box[0]:.2f}, {box[1]:.2f}, {box[2]:.2f}, {box[3]:.2f}], Label: {label}, Score: {score:.4f}")
-            else:
-                print("  No lesions detected.")
+
+    
+    with open(outfile, 'w') as f:
+        f.write("id,box_x1,box_y1,box_x2,box_y2,score\n")
+        for filename, detections in zip(filenames, all_detections):
+            id = pathlib.Path(filename).stem  # Get the file name without extension
+            print(f"Detections for {id}:")
+            for c in range(1, num_classes):
+                if len(detections[c]) > 0:
+                    for detection in detections[c]:
+                        box = detection[:4]
+                        score = detection[4]
+                        print(f"  Class {c}:   Box: [{box[0]:.2f}, {box[1]:.2f}, {box[2]:.2f}, {box[3]:.2f}], Score: {score:.4f}")
+                        f.write(f"{id},{box[0]:.2f},{box[1]:.2f},{box[2]:.2f},{box[3]:.2f},{score:.4f}\n")
+        
+        
+        # for i, detection in enumerate(detections): # iterates over images
+        #     for c in range(num_classes-1):
+        #         if len(detection[c]) > 0:
+        #             print(f"  Instance {i + 1}:")
+        #             for j in range(len(detection[c])):
+        #                 box = detection[j][:4]
+        #                 label = c + 1 
+        #                 score = detection[j][4]
+        #                 print(f"    Box: [{box[0]:.2f}, {box[1]:.2f}, {box[2]:.2f}, {box[3]:.2f}], Label: {label}, Score: {score:.4f}")
+        #         else:
+        #             print("  No lesions detected.")
 
 if __name__ == "__main__":
     import argparse
@@ -222,8 +242,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Detect lesions in mammography images.")
     parser.add_argument("--model_path", default = '../faster_rcnn_vgg16_weights', help="Path to the Faster R-CNN model file.")
     parser.add_argument("--file_input", help="Path to an image file or a CSV file containing a 'filename' column.")
-    parser.add_argument("--score_thresh", type=float, default=0.3, help="Score threshold for detections.")
+    parser.add_argument("--score_thresh", type=float, default=0.05, help="Score threshold for detections.")
+    parser.add_argument("--outfile", default="detections.csv", help="Output file to save detections.")
 
     args = parser.parse_args()
 
-    main(args.model_path, args.file_input, score_thresh=args.score_thresh)
+    main(args.model_path, args.file_input, score_thresh=args.score_thresh, outfile=args.outfile)

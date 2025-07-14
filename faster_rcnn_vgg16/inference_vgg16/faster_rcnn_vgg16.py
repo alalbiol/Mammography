@@ -6,7 +6,7 @@ import os
 from collections import OrderedDict
 import torchvision
 
-from proposal_layer import ProposalLayer
+from proposal_layer import ProposalLayer, bbox_transform_inv, clip_boxes
 
 # Import necessary for ROI Align and NMS (install torchvision if you haven't)
 try:
@@ -18,7 +18,7 @@ except ImportError:
     nms = None
 
 
-
+DEBUG = False
 
 
 class VGG16Backbone(nn.Module):
@@ -146,6 +146,9 @@ class FasterRCNN(nn.Module):
         # gt_boxes: (G, 5) - [x1, y1, x2, y2, class_id] - only for training
         # rois: (R, 5) - [batch_idx, x1, y1, x2, y2] - for inference, or from RPN during training
 
+        assert im_info.shape[0] == images.shape[0], "Batch size mismatch between images and im_info"
+        assert im_info.shape[0] == 1, "Currently only batch size of 1 is supported for inference"
+
         base_feat = self.backbone(images)
 
         # RPN branch
@@ -161,9 +164,10 @@ class FasterRCNN(nn.Module):
         # The ProposalLayer is designed to handle this.
         rois, scores = self.proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info)
         
-        print("Scores after proposal layer:", scores.shape)  # Debugging output
-        print("First scores", scores[:10])  # Print first score for debugging
-        print("First rois", rois[:10])  # Print first score for debugging
+        if DEBUG:
+            print("Scores after proposal layer:", scores.shape)  # Debugging output
+            print("First scores", scores[:10])  # Print first score for debugging
+            print("First rois", rois[:10])  # Print first score for debugging
 
         if rois is None:
             # Placeholder for RPN's ProposalLayer equivalent during inference/eval
@@ -172,7 +176,8 @@ class FasterRCNN(nn.Module):
             # For demonstration, if no rois are provided, we'll return RPN outputs
             # and expect proposals to be handled externally or in a dedicated module.
             print("Warning: No ROIs provided. RCNN head will not be executed.")
-            return rpn_cls_score, rpn_bbox_pred, None, None
+            return rpn_cls_score, rpn_bbox_pred, None, None, None
+
 
         # ROI Pooling / ROI Align
         if self.use_roi_align and roi_align:
@@ -187,15 +192,17 @@ class FasterRCNN(nn.Module):
                                     output_size=(self.pooled_h, self.pooled_w),
                                     spatial_scale=self.spatial_scale)
             
-            print("spatial scale:", self.spatial_scale)
+# The above Python code snippet is a part of a neural network model implementation. It seems to be
+# related to handling features at a specific layer of the network. Here is a breakdown of the code:
+            # print("spatial scale:", self.spatial_scale)
             
-            print("Saving pooled features shape:", pooled_features.shape)  # Debugging output
-            pooled_features_np = pooled_features.cpu().numpy()
-            np.save("pool5.npy", pooled_features_np)
+            # print("Saving pooled features shape:", pooled_features.shape)  # Debugging output
+            # pooled_features_np = pooled_features.cpu().numpy()
+            # np.save("pool5.npy", pooled_features_np)
             
-            print("replacing pooled_features with pooled_features_caffe")
-            pooled_features_caffe = np.load("../scoring/P_00001_LEFT_CC_pool5.npy")
-            pooled_features = torch.from_numpy(pooled_features_caffe).to(pooled_features.device)
+            # print("replacing pooled_features with pooled_features_caffe")
+            # pooled_features_caffe = np.load("../scoring/P_00001_LEFT_CC_pool5.npy")
+            # pooled_features = torch.from_numpy(pooled_features_caffe).to(pooled_features.device)
 
         
         else:
@@ -262,7 +269,8 @@ def load_caffe_weights_into_pytorch(pytorch_model, extracted_weights_dir):
                             # For VGG, it should generally be a direct match.
                         model_state_dict[f"{pytorch_module_prefix}.weight"].copy_(torch.from_numpy(caffe_weights))
                         num_imported_weights += 1
-                        print(f"  Loaded {caffe_layer_name}_weights into {pytorch_module_prefix}.weight")
+                        if DEBUG:
+                            print(f"  Loaded {caffe_layer_name}_weights into {pytorch_module_prefix}.weight")
 
                     # For InnerProduct (Linear) layers
                     elif len(caffe_weights.shape) == 2:
@@ -303,7 +311,8 @@ def load_caffe_weights_into_pytorch(pytorch_model, extracted_weights_dir):
                                  print(f"  Please manually verify weight dimensions for {caffe_layer_name}.")
                         else:
                             model_state_dict[f"{pytorch_module_prefix}.weight"].copy_(torch.from_numpy(caffe_weights))
-                            print(f"  Loaded {caffe_layer_name}_weights into {pytorch_module_prefix}.weight")
+                            if DEBUG:
+                                print(f"  Loaded {caffe_layer_name}_weights into {pytorch_module_prefix}.weight")
                             num_imported_weights += 1
 
 
@@ -317,7 +326,8 @@ def load_caffe_weights_into_pytorch(pytorch_model, extracted_weights_dir):
             caffe_biases = np.load(biases_path)
             try:
                 model_state_dict[f"{pytorch_module_prefix}.bias"].copy_(torch.from_numpy(caffe_biases))
-                print(f"  Loaded {caffe_layer_name}_biases into {pytorch_module_prefix}.bias")
+                if DEBUG:
+                    print(f"  Loaded {caffe_layer_name}_biases into {pytorch_module_prefix}.bias")
                 num_imported_weights += 1
             except RuntimeError as e:
                 print(f"Error loading biases for {caffe_layer_name} (into {pytorch_module_prefix}.bias): {e}")
@@ -326,8 +336,6 @@ def load_caffe_weights_into_pytorch(pytorch_model, extracted_weights_dir):
     pytorch_model.load_state_dict(model_state_dict)
     print("All available Caffe weights loaded into the PyTorch model.")
     print(f"Total parameters imported: {num_imported_weights} out of {len(model_state_dict)}")
-
-
 
 def decode_boxes(rois, bbox_pred, num_classes, image_sizes):
     """
@@ -495,6 +503,71 @@ def post_process_detections(cls_score_out, bbox_pred_out, rois_out, im_info, num
             }
 
     return final_detections
+
+
+def post_process_detections2(cls_score_out, bbox_pred_out, rois, im_info, num_classes, score_thresh=0.05, 
+                            nms_thresh=0.3):
+    """
+    Performs final post-processing on the model outputs to get detected objects.
+
+    Args:
+        cls_score_out (Tensor): R-CNN classification scores (Total_Num_Proposals, num_classes).
+        bbox_pred_out (Tensor): R-CNN bounding box predictions (Total_Num_Proposals, num_classes * 4).
+        rois_out (Tensor): Generated ROIs from ProposalLayer (Total_Num_Proposals, 5).
+        im_info (Tensor): Original image information (N, 3) - [height, width, scale].
+        num_classes (int): Total number of classes (including background).
+        score_thresh (float): Confidence threshold for filtering detections.
+        nms_thresh (float): IoU threshold for Non-Maximum Suppression. Should be 0.3 to match Caffe model.
+
+    Returns:
+        List[Dict]: A list of dictionaries, one for each image in the batch.
+                    Each dictionary contains 'boxes', 'labels', 'scores'.
+    """
+    if nms is None:
+        raise ImportError("torchvision.ops.nms not found. Cannot perform post-processing without NMS.")
+
+    batch_size = im_info.shape[0]
+    
+    assert batch_size == 1, "Currently only batch size of 1 is supported for inference"
+    device = cls_score_out.device
+    
+   
+    # Apply softmax to get class probabilities
+    class_probs = F.softmax(cls_score_out, dim=-1) # (Total_Num_Proposals, num_classes)
+
+    ind = torch.argmax(class_probs[:,2]) # (Total_Num_Proposals,)
+    
+
+    all_boxes = [[]  for _ in range(num_classes)]# Initialize a list for each class)]
+                
+
+    # Iterate through each image in the batch
+    for img_idx in range(batch_size):
+        boxes = rois[:, 1:5] / im_info[0,2] # Scale ROIs to original image size
+        pred_boxes = bbox_transform_inv(boxes, bbox_pred_out)
+        pred_boxes = clip_boxes(pred_boxes, im_info[0,:])
+        
+    
+        # skip j = 0, because it's the background class
+        for j in range(1, num_classes):
+            inds = torch.nonzero(class_probs[:, j] > score_thresh, as_tuple=False).squeeze(1)
+            if len(inds) == 0:
+                continue
+            cls_scores = class_probs[inds, j]
+            cls_boxes = pred_boxes[inds, j*4:(j+1)*4]
+            keep_nms = nms(cls_boxes, cls_scores, nms_thresh)
+            
+            cls_boxes = cls_boxes.cpu().numpy()
+            cls_scores = cls_scores.cpu().numpy()
+            keep_nms = keep_nms.cpu().numpy()
+
+            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
+                .astype(np.float32, copy=False)
+
+            cls_dets = cls_dets[keep_nms, :]
+            all_boxes[j] = cls_dets
+
+    return all_boxes
 
 
 

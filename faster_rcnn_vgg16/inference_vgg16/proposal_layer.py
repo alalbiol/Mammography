@@ -55,7 +55,7 @@ def clip_boxes(boxes, im_info):
     Clip boxes to image boundaries.
     im_info is (height, width)
     """
-    height, width = im_info[0], im_info[1]
+    height, width = im_info[0] / im_info[2], im_info[1] / im_info[2]  # Adjust for scale
     boxes[:, 0::4].clamp_(0, width - 1)
     boxes[:, 1::4].clamp_(0, height - 1)
     boxes[:, 2::4].clamp_(0, width - 1)
@@ -213,8 +213,8 @@ class ProposalLayer(nn.Module):
         # Convert anchors into proposals via bbox transformations
         proposals = bbox_transform_inv(anchors, bbox_deltas)
 
-        # 2. clip predicted boxes to image
-        proposals = clip_boxes(proposals, torch.tensor([im_height, im_width], device=proposals.device))
+        # 2. clip predicted boxes to scaled image size (for this reason im_scale=1.0)
+        proposals = clip_boxes(proposals, torch.tensor([im_height, im_width,1.0], device=proposals.device))
 
         # 3. remove predicted boxes with either height or width < threshold
         # (NOTE: convert min_size to input image scale stored in im_info[2])
