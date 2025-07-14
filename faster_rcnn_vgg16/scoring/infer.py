@@ -17,7 +17,8 @@ from fast_rcnn.test import im_detect
 import numpy as np
 import caffe
 import cv2
-#import pandas as pd
+
+DEBUG = False  # Set to True to enable debug mode
 
 
 cfg.TEST.SCALES=(1700,) #change scales
@@ -55,9 +56,12 @@ def detect(pred_fn,d=None,meta_d='/metadata/',
     meta = {'filename': image_names}  # Create a dictionary to hold filenames
     
     net=load_net(prototxt,caffemodel) #load net
-    meta['confidence'] = detect_ims(net,meta['filename']) #detect
-    #save the tsv file
-    #meta.to_csv(pred_fn,sep='\t',index=False)
+    confidences = detect_ims(net,meta['filename']) #detect
+    # convert to pandas DataFrame, firs item in list is the id, second is the confidence
+    with open(meta_d + pred_fn, 'w') as f:
+        f.write('id\tconfidence\n')
+        for id, confidence in confidences:
+            f.write("{}\t{:.6f}\n".format(id, confidence))
 
 def load_net(prototxt,caffemodel):
     """Load a faster rcnn net in test mode for prediction."""
@@ -70,107 +74,112 @@ def load_net(prototxt,caffemodel):
 
 def detect_ims(net,fn_list,d=None,cls_ind=2,offset=0):
     """Detect on a list of images."""
-    confidence=[]
-    
-    print(fn_list)
-    
+    confidences=[]
+        
     for i,fn in enumerate(fn_list):
         
         fn = d + fn if d is not None else fn  # prepend directory if needed
         im=load_im(fn) #load im
         scores,boxes=im_detect(net, im) #eval with net
         
-        input_image = net.blobs['data'].data.copy()
-        print("Input blob shape:", input_image.shape)
-        print("Input image max value:", input_image.max())
-        print("Input image min value:", input_image.min())
-        print("Input image mean value:", input_image.mean(axis=(0,2,3)))
+        if DEBUG:
+            input_image = net.blobs['data'].data.copy()
+            print("Input blob shape:", input_image.shape)
+            print("Input image max value:", input_image.max())
+            print("Input image min value:", input_image.min())
+            print("Input image mean value:", input_image.mean(axis=(0,2,3)))
+            
+            activation = net.blobs['conv1_1'].data.copy()
+            print("conv1_1 activation shape:", activation.shape)
+            conv1_1_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv1_1.npy"
+            np.save(conv1_1_name, activation)
+            
+            activation = net.blobs['conv2_2'].data.copy()
+            print("conv2_2 activation shape:", activation.shape)
+            conv2_2_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv2_2.npy"
+            np.save(conv2_2_name, activation)
+
+            activation = net.blobs['conv3_3'].data.copy()
+            print("conv3_3 activation shape:", activation.shape)
+            conv3_3_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv3_3.npy"
+            np.save(conv3_3_name, activation)
+
+            
+            activation = net.blobs['conv4_3'].data.copy()
+            print("conv4_3 activation shape:", activation.shape)
+            conv4_3_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv4_3.npy"
+            np.save(conv4_3_name, activation)
+
+            
+            activation = net.blobs['conv5_3'].data.copy()
+            print("conv5_3 activation shape:", activation.shape)
+            conv5_3_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv5_3.npy"
+            np.save(conv5_3_name, activation)
+
+            
+            activation = net.blobs['rpn_cls_score'].data.copy()
+            print("rpn_cls_score activation shape:", activation.shape)
+            rpn_cls_score_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_cls_score.npy"
+            np.save(rpn_cls_score_name, activation)
+
+
+            activation = net.blobs['rpn_cls_score_reshape'].data.copy()
+            print("rpn_cls_score_reshape activation shape:", activation.shape)
+            rpn_cls_score_reshape_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_cls_score_reshape.npy"
+            np.save(rpn_cls_score_reshape_name, activation)
+
+            activation = net.blobs['rpn_cls_prob'].data.copy()
+            print("rpn_cls_prob activation shape:", activation.shape)
+            rpn_cls_prob_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_cls_prob.npy"
+            np.save(rpn_cls_prob_name, activation)
+
+            activation = net.blobs['rpn_cls_prob_reshape'].data.copy()
+            print("rpn_cls_prob_reshape activation shape:", activation.shape)
+            rpn_cls_prob_reshape_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_cls_prob_reshape.npy"
+            np.save(rpn_cls_prob_reshape_name, activation)
+
+            activation = net.blobs['rpn_bbox_pred'].data.copy()
+            print("rpn_bbox_pred activation shape:", activation.shape)
+            rpn_bbox_pred_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_bbox_pred.npy"
+            np.save(rpn_bbox_pred_name, activation)
+
+            activation = net.blobs['rois'].data.copy()
+            print("rois activation shape:", activation.shape)
+            rois_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rois.npy"
+            np.save(rois_name, activation)
+
+            activation = net.blobs['pool5'].data.copy()
+            print("pool5 activation shape:", activation.shape)
+            pool5_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_pool5.npy"
+            np.save(pool5_name, activation)
+
+            activation = net.blobs['fc6'].data.copy()
+            print("fc6 activation shape:", activation.shape)
+            fc6_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_fc6.npy"
+            np.save(fc6_name, activation)
+
+            activation = net.blobs['cls_prob'].data.copy()
+            print("cls_prob activation shape:", activation.shape)
+            cls_prob_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_cls_prob.npy"
+            np.save(cls_prob_name, activation)
+
+            activation = net.blobs['bbox_pred'].data.copy()
+            print("bbox_pred activation shape:", activation.shape)
+            bbox_pred_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_bbox_pred.npy"
+            np.save(bbox_pred_name, activation)
+            #print("All net blobs keys:", net.blobs.keys())
         
-        activation = net.blobs['conv1_1'].data.copy()
-        print("conv1_1 activation shape:", activation.shape)
-        conv1_1_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv1_1.npy"
-        np.save(conv1_1_name, activation)
         
-        activation = net.blobs['conv2_2'].data.copy()
-        print("conv2_2 activation shape:", activation.shape)
-        conv2_2_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv2_2.npy"
-        np.save(conv2_2_name, activation)
-
-        activation = net.blobs['conv3_3'].data.copy()
-        print("conv3_3 activation shape:", activation.shape)
-        conv3_3_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv3_3.npy"
-        np.save(conv3_3_name, activation)
-
-        
-        activation = net.blobs['conv4_3'].data.copy()
-        print("conv4_3 activation shape:", activation.shape)
-        conv4_3_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv4_3.npy"
-        np.save(conv4_3_name, activation)
-
-        
-        activation = net.blobs['conv5_3'].data.copy()
-        print("conv5_3 activation shape:", activation.shape)
-        conv5_3_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_conv5_3.npy"
-        np.save(conv5_3_name, activation)
-
-        
-        activation = net.blobs['rpn_cls_score'].data.copy()
-        print("rpn_cls_score activation shape:", activation.shape)
-        rpn_cls_score_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_cls_score.npy"
-        np.save(rpn_cls_score_name, activation)
-
-
-        activation = net.blobs['rpn_cls_score_reshape'].data.copy()
-        print("rpn_cls_score_reshape activation shape:", activation.shape)
-        rpn_cls_score_reshape_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_cls_score_reshape.npy"
-        np.save(rpn_cls_score_reshape_name, activation)
-
-        activation = net.blobs['rpn_cls_prob'].data.copy()
-        print("rpn_cls_prob activation shape:", activation.shape)
-        rpn_cls_prob_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_cls_prob.npy"
-        np.save(rpn_cls_prob_name, activation)
-
-        activation = net.blobs['rpn_cls_prob_reshape'].data.copy()
-        print("rpn_cls_prob_reshape activation shape:", activation.shape)
-        rpn_cls_prob_reshape_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_cls_prob_reshape.npy"
-        np.save(rpn_cls_prob_reshape_name, activation)
-
-
-
-        
-        activation = net.blobs['rpn_bbox_pred'].data.copy()
-        print("rpn_bbox_pred activation shape:", activation.shape)
-        rpn_bbox_pred_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rpn_bbox_pred.npy"
-        np.save(rpn_bbox_pred_name, activation)
-
-        activation = net.blobs['rois'].data.copy()
-        print("rois activation shape:", activation.shape)
-        rois_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_rois.npy"
-        np.save(rois_name, activation)
-
-        activation = net.blobs['pool5'].data.copy()
-        print("pool5 activation shape:", activation.shape)
-        pool5_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_pool5.npy"
-        np.save(pool5_name, activation)
-
-        activation = net.blobs['fc6'].data.copy()
-        print("fc6 activation shape:", activation.shape)
-        fc6_name = "/my_code/scoring/"+pathlib.Path(fn).stem+"_fc6.npy"
-        np.save(fc6_name, activation)
-
-
-        
-        #print("All net blobs keys:", net.blobs.keys())
-        
-        
-        confidence.append(scores[:,cls_ind].max()) #save the max score
-        print("Image:",fn,"Confidence:",confidence[-1]) #print some info
-        print("score shape:", scores.shape)  # print score shape
-        #write_prog(100.*i/len(fn_list),offset) #write progress to txt
-        for score, box in zip(scores, boxes):
-            if score[cls_ind] > 0.5:
-                print("   Detected class", cls_ind, " with score ", score[cls_ind])
-    return confidence
+        id = pathlib.Path(fn).stem  # Get the file name without extension
+        confidences.append((id, scores[:,cls_ind].max())) #save the max score
+        print("Image:",id,"Confidence:",confidences[-1][1]) #print some info
+        if DEBUG:
+            print("score shape:", scores.shape)  # print score shape
+            #write_prog(100.*i/len(fn_list),offset) #write progress to txt
+            for score, box in zip(scores, boxes):
+                if score[cls_ind] > 0.5:
+                    print("   Detected class", cls_ind, " with score ", score[cls_ind]," box:", np.round(box[-4:]))
+    return confidences
 
 def load_im(im_fn):
     """Load image."""
