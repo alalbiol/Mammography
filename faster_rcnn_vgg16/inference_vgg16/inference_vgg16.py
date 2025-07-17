@@ -7,24 +7,41 @@ import torch
 import pandas as pd
 import os
 from tqdm import tqdm
+import pydicom
+from pydicom import dcmread
 
 
 from faster_rcnn_vgg16 import FasterRCNN, post_process_detections, post_process_detections2, load_caffe_weights_into_pytorch
 
 DEBUG = False  # Set to True to enable debug mode
 
-def load_im(filename, target_scale=1700, max_size=2100):
+def load_im(filename, target_scale=1700, max_size=2100, dataset='DDSM'):
     """Load and preprocess image to match Faster R-CNN cfg.TEST scaling."""
     # Load and convert to float32
-    image = np.array(Image.open(filename)).astype(np.float32)
-    if DEBUG:
-        print("image max before processing:", image.max())
 
-    # DDSM-style normalization
-    im = image / image.max() * 3.0
-    im = np.clip(im, 0.8, 2.9) - 0.8
-    image = 255.0 * im / im.max()  # Normalize to [0, 255]
+    if dataset == 'DDSM':
+        image = np.array(Image.open(filename)).astype(np.float32)
+        if DEBUG:
+            print("image max before processing:", image.max())
+        # DDSM-style normalization
+        im = image / image.max() * 3.0
+        image = np.clip(im, 0.8, 2.9) - 0.8
+    elif dataset == 'INBREAST':
+        image= dcmread(filename).pixel_array.astype(np.float32)
+        
+        # INBREAST-style normalization
+        image = (image - 1000) / (2500 - 1000) * 255.0
+    elif dataset == 'dream_pilot':
+        image= dcmread(filename).pixel_array.astype(np.float32)
+        image=(255.*image/image.max())
     
+    else:
+        # raise 
+        raise ValueError(f"Unknown dataset: {dataset}. Supported datasets are 'DDSM' and 'INBREAST'.")
+        
+    image=(255.*image/image.max()) 
+    image = np.clip(image, 0, 255)  
+        
 
     # Compute scale factor based on shorter side
     im_shape = image.shape
@@ -45,7 +62,7 @@ def load_im(filename, target_scale=1700, max_size=2100):
 
     return image_resized, scale
 
-def detect_lesions(filename, model, score_thresh = 0.05,  device='cuda'):
+def detect_lesions(filename, model, score_thresh = 0.05,  device='cuda', dataset='DDSM'):
     """
     Detects lesions in a mammography image using a Faster R-CNN model.
 
@@ -57,7 +74,7 @@ def detect_lesions(filename, model, score_thresh = 0.05,  device='cuda'):
         list: A list of bounding boxes, labels, and scores for detected lesions.
               Each item in the list is a dict with keys: 'boxes', 'labels', 'scores'.
     """
-    image, scale = load_im(filename)
+    image, scale = load_im(filename, dataset=dataset)  # Load and preprocess image
     image = torch.as_tensor(image, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0) # to torch tensor, channel first and add batch dim
     
     if DEBUG:
@@ -142,7 +159,7 @@ def detect_lesions(filename, model, score_thresh = 0.05,  device='cuda'):
                                              score_thresh=score_thresh,nms_thresh=0.1)
     return detections
 
-def detect_lesions_in_files(filenames, model, score_thresh = 0.05,  device='cuda'):
+def detect_lesions_in_files(filenames, model, score_thresh = 0.05,  device='cuda', dataset='DDSM'):
     """
     Detects lesions in a list of mammography image files.
 
@@ -157,7 +174,7 @@ def detect_lesions_in_files(filenames, model, score_thresh = 0.05,  device='cuda
     all_detections = []
     for filename in tqdm(filenames, desc="Processing images"):
         tqdm.write(f"Processing {pathlib.Path(filename).name}")
-        detections = detect_lesions(filename, model, score_thresh=score_thresh, device=device)
+        detections = detect_lesions(filename, model, score_thresh=score_thresh, device=device, dataset=dataset)
         all_detections.append(detections)
     return all_detections
 
@@ -194,7 +211,7 @@ def load_faster_rcnn_vgg16_model(model_path="../faster_rcnn_vgg16_weights", devi
     pytorch_model.eval() # Set to evaluation mode for inference
     return pytorch_model
 
-def main(model_path, file_input, score_thresh=0.3, outfile="detections.csv"):
+def main(model_path, file_input, score_thresh=0.3, outfile="detections.csv", dataset='DDSM'):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = load_faster_rcnn_vgg16_model(model_path)
     model.to(device)
@@ -207,7 +224,10 @@ def main(model_path, file_input, score_thresh=0.3, outfile="detections.csv"):
         
     num_classes = 3  # Adjust based on your model's output classes
 
-    all_detections = detect_lesions_in_files(filenames, model, score_thresh=score_thresh, device= device)
+    all_detections = detect_lesions_in_files(filenames, model, 
+                                             score_thresh=score_thresh, 
+                                             device= device,
+                                             dataset=dataset)
 
     
     with open(outfile, 'w') as f:
@@ -244,7 +264,8 @@ if __name__ == "__main__":
     parser.add_argument("--file_input", help="Path to an image file or a CSV file containing a 'filename' column.")
     parser.add_argument("--score_thresh", type=float, default=0.05, help="Score threshold for detections.")
     parser.add_argument("--outfile", default="detections.csv", help="Output file to save detections.")
-
+    parser.add_argument("--dataset", default='DDSM', choices=['DDSM', 'INBREAST', 'dream_pilot'], help="Dataset type for normalization.")
     args = parser.parse_args()
 
-    main(args.model_path, args.file_input, score_thresh=args.score_thresh, outfile=args.outfile)
+    main(args.model_path, args.file_input, score_thresh=args.score_thresh, 
+         outfile=args.outfile, dataset=args.dataset)

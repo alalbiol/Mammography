@@ -63,8 +63,6 @@ class BalancedPatchBatchSampler(torch.utils.data.sampler.Sampler):
     def __len__(self):
         return self.dataset_size  # Total number of samples
 
-
-
 class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
     """
     BalancedBatchSampler ensures each batch contains an equal number of positive and negative samples.
@@ -100,7 +98,6 @@ class BalancedBatchSampler(torch.utils.data.sampler.Sampler):
     def __len__(self):
         return self.dataset_size # Total number of samples
 
- 
 
 class RandomAffineTransform:
     def __init__(self, angle_range=(-180, 180), shear_range=(-0.1, 0.1), 
