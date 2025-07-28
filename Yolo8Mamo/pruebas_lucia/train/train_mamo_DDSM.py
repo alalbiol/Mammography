@@ -118,17 +118,6 @@ if __name__ == "__main__":
     data_module = DDSM_DataModule(config=config)
     
     
-    #logger = get_logger(config) if args.logger else None
-
-
-    # Trainer arguments
-    #callbacks = create_callbacks(config)
-    
-    
-    # Trainer
-    #trainer_kwargs = get_parameter(config, ["Trainer"], mode="default", default={})
-    
-    #print("Trainer kwargs: ", trainer_kwargs)
     
     Lmodel = DDSM_CustomModel(model)
 

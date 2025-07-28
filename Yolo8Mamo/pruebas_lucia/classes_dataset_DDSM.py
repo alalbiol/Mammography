@@ -119,6 +119,11 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         target["boxes"] = boxes
         target["labels"] = labels
 
+        # Nuevo:
+        target["id"] = torch.tensor([idx], dtype=torch.int64)  # Añadir el índice de la imagen como ID
+        target["original_img_id_str"] = img_id 
+        # ----------------------------------------------------
+
         if self.transform:
             transformed = self.transform(
                 image=image,

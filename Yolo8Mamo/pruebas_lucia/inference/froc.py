@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import os
 
 
-detections_csv = '/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/inference/detections.csv' # Ruta del archivo CSV con las detecciones
-ground_truth_csv = '/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/inference/bounding_boxes_good.csv' # Ruta del archivo CSV con las ground truth
+detections_csv = '/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/inference/inference_results/model_detections.csv' # Ruta del archivo CSV con las detecciones
+ground_truth_csv = '/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/bboxes_ini_trans.csv' # Ruta del archivo CSV con las ground truth
 output_plot = 'froc_curve.png' # Ruta de la carpeta donde se guardará el gráfico FROC de salida
 
 # La columna 'cancer' indica si el maligno o benigno. Asumimos cancer = 1 como maligno y cancer = 0 como benigno
@@ -194,14 +194,6 @@ if __name__ == '__main__':
     print(f"Curva FROC guardada en: {output_plot}")
 
     from sklearn.metrics import auc
-    
-    # froc_auc = auc(fps_per_image_list, sensitivity_list)
-    # print(f"\nÁrea Bajo la Curva FROC (AUFROC): {froc_auc:.4f} 🚀") # Formato a 4 decimales
-
-    # plt.tight_layout()
-    # plt.savefig(output_plot) # Para almacenar el gráfico
-    # print(f"Curva FROC guardada en: {output_plot}")
-    # print("¡Proceso completado! 🎉")
 
     scores_cancer = all_detections_df.groupby('id').agg({'score': 'max'})
     print("Numb of images in scores = ", len(scores_cancer))

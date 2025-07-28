@@ -59,20 +59,6 @@ data_module = DDSMPatchDataModule(config=config)
     
 #logger = get_logger(config) if args.logger else None
 
-# Dividir los elementos en dos conjuntos: 80% para entrenamiento y 20% para prueba
-#print("Entrada a la division de los conjuntos")
-
-# Calcular los tamaños de los conjuntos de entrenamiento y prueba
-#train_size = int(0.8 * len(total_dataset))
-#test_size = len(total_dataset) - train_size
-
-# Dividir el conjunto de datos en entrenamiento y prueba
-#train_dataset, test_dataset = random_split(total_dataset, [train_size, test_size])
-
-#train_dataset, test_dataset = train_test_split(total_dataset, test_size=0.2, random_state=42)
-
-#valid_size = int(0.2 * train_size)
-#train2_size = train_size - valid_size
 
 seed = torch.Generator().manual_seed(42)
 #_, valid_dataset = data.random_split(train_dataset, [train2_size, valid_size], generator = seed)
@@ -80,10 +66,6 @@ device = 'cuda'
 
 print("Dataset generados")
 
-
-#train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True, collate_fn= lambda x: tuple(zip(*x)))
-#val_dataloader = DataLoader(valid_dataset, batch_size=2, shuffle=False, collate_fn= lambda x: tuple(zip(*x)))
-#test_dataloader = DataLoader(test_dataset, batch_size=2, shuffle=False, collate_fn= lambda x: tuple(zip(*x)))
 
 print("Dataloader generados")
 

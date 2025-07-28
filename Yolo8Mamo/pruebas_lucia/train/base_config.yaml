@@ -19,18 +19,13 @@ Datamodule:
   #   resize_horizontal: 640
   #   resize_vertical: 640
 
-
- #patch_size: 1792
- # Esto lo tengo que poner???????????? convert_to_rgb: True
-
   split_csv: resources/DDSM_train.csv
   #ddsm_root: /home/Data/CBIS-DDSM-segmentation-2240x1792
   image_directory: /home/Data/CBIS-DDSM-segmentation-2240x1792/images
   bb: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv
   # eval_patches_root: resources/DDSM_test.csv
     # Lo de aquí arriba no sé si está bien
-  labels_file: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv 
-  # batch_size: 4
+  labels_file: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv
   batch_size: 4
   num_workers: 31
   pin_memory: True
@@ -57,7 +52,7 @@ LightningModule:
     min_lr: 1.e-8
 
 Trainer:
-  max_epochs: 75
+  max_epochs: 80
   #limit_train_batches: 20
 
 
