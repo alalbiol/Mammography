@@ -1,0 +1,72 @@
+General:
+  source_root: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/
+  gpu_type: "RTX 3090" 
+
+Datamodule:
+  # Transforms:
+  #   p_horizontal_flip: 0.5
+  #   p_vertical_flip: 0.5
+  #   p_random_brightness_contrast: 0.3
+  #   p_rotate: 0.3
+  #   limit_rotate: 15
+  #   shift_limit: 0.05
+  #   scale_limit: 0.05
+  #   rotate_limit: 0
+  #   p_scale_rotate: 0.3
+  #   width_random_crop: 512
+  #   height_random_crop: 512
+  #   p_random_crop: 0.3
+  #   resize_horizontal: 640
+  #   resize_vertical: 640
+
+  split_csv: resources/DDSM_train.csv
+  #ddsm_root: /home/Data/CBIS-DDSM-segmentation-2240x1792
+  image_directory: /home/Data/CBIS-DDSM-segmentation-2240x1792/images
+  bb: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/bboxes_ini_trans.csv
+  labels_file: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/bboxes_ini_trans.csv
+  batch_size: 4
+  num_workers: 31
+  pin_memory: True
+  #subset_size_train: 1000
+  #subset_size_test: 100
+
+
+Logger:
+  type: wandb
+  project: ddsm_patch
+  name: patches_224
+  save_dir: /tmp/logs/ddsm_patch_224
+
+LightningModule:
+  model_name: resnet18
+  learning_rate: 0.001
+  optimizer_type: adam
+  num_classes: 3
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_options:
+    mode: min
+    factor: 0.5
+    patience: 20
+    min_lr: 1.e-8
+
+Trainer:
+  max_epochs: 80
+  #limit_train_batches: 20
+
+
+
+Callbacks:
+  VisualizeBatchImagesCallback:
+  #   labels_file: /home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv 
+    num_rows: 1
+
+  ModelCheckpoint:
+    monitor: val_map
+    mode: max
+    save_top_k: 1
+    dirpath: /home/lloprib/model_checkpoints
+    filename: best_model
+    verbose: True
+  
+  
+  

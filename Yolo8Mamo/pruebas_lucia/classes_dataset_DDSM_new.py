@@ -27,14 +27,14 @@ from PIL import Image
 import numpy as np
 import torch
 
-def bounding_boxes_coord(img_id, labels_file):
-    """
-    Extracts bounding box coordinates for a given image ID from the labels file.
-    """
-    bounding_boxes = pd.read_csv(labels_file)
-    image_boxes = bounding_boxes[bounding_boxes["id"] == img_id]
-    boxes = image_boxes[["x_min", "y_min", "x_max", "y_max"]].values.tolist()
-    return boxes
+# def bounding_boxes_coord(img_id, labels_file):
+#     """
+#     Extracts bounding box coordinates for a given image ID from the labels file.
+#     """
+#     bounding_boxes = pd.read_csv(labels_file)
+#     image_boxes = bounding_boxes[bounding_boxes["id"] == img_id]
+#     boxes = image_boxes[["x_min", "y_min", "x_max", "y_max"]].values.tolist()
+#     return boxes
 
 
 
@@ -91,8 +91,6 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
             x_max = x + w
             y_max = y + h
 
-            boxes.append([x_min, y_min, x_max, y_max])
-
         return boxes
 
 
@@ -109,7 +107,11 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         image = np.array(Image.open(img_path)).astype(np.float32)
         image= convert_16bit_to_8bit(image)  # Convertir a 8 bits
         image = np.expand_dims(image, axis=-1)
-        image = np.repeat(image, 3, axis=-1)  # Convertir a 3 canales
+        image = np.repeat(image, 3, axis=-1)  # Convertir a 3 canales 
+        # Transformaciones nuevas
+        image = image / image.max() * 3.0
+        image = np.clip(image, 0.8, 2.9) - 0.8
+        # ------------------------
         boxes = self.bounding_boxes_coord(img_id)
         boxes = np.array(boxes)
         labels = np.ones((boxes.shape[0],), dtype=np.long)
@@ -121,7 +123,7 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         # Nuevo:
         target["id"] = torch.tensor([idx], dtype=torch.int64)  # Añadir el índice de la imagen como ID
         target["original_img_id_str"] = img_id 
-        # ----------------------------------------------------
+        # --------
 
         if self.transform:
             transformed = self.transform(
@@ -189,16 +191,21 @@ class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automát
         self.image_directory = get_parameter(config, ['Datamodule','image_directory'])
         self.bb = get_parameter(config, ['Datamodule','bb'])   
 
+        # self.train_transforms = A.Compose([
+        #     A.HorizontalFlip(p=0.5),
+        #     A.RandomBrightnessContrast(p=0.3),
+        #     A.Rotate(limit=35, p=0.3),
+        #     A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=0, p=0.3),
+        #     A.RandomSizedBBoxSafeCrop(width=512, height=512, p=0.3, erosion_rate=0.2),
+        #     #A.Resize(2240, 1792), # reducir las dimensiones a la mitad 
+        #     #A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
+        #     ToTensorV2()
+        #     ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids'], min_visibility = 0.3)) # min_visibility es el porcentaje mínimo de visibilidad de la caja para que se considere válida
+
+        # En el artículo sólo se realiza flip horizontal (mirarlo por si acaso)
         self.train_transforms = A.Compose([
-            A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(p=0.3),
-            A.Rotate(limit=35, p=0.3),
-            A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=0, p=0.3),
-            A.RandomSizedBBoxSafeCrop(width=512, height=512, p=0.3, erosion_rate=0.2),
-            #A.Resize(2240, 1792), # reducir las dimensiones a la mitad 
-            #A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0), max_pixel_value=255.0),  # <-- ¡esto es clave!
-            ToTensorV2()
-            ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids'], min_visibility = 0.3)) # min_visibility es el porcentaje mínimo de visibilidad de la caja para que se considere válida
+            A.HorizontalFlip(p=0.5), ToTensorV2()], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids'], min_visibility = 0.3)) # min_visibility es el porcentaje mínimo de visibilidad de la caja para que se considere válida
+
 
         self.val_transforms = A.Compose([
             A.Resize(2240, 1792), # reducir las dimensiones a la mitad 

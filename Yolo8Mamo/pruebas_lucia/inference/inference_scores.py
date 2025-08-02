@@ -7,15 +7,11 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
-import albumentations as A
 from albumentations import Compose, Resize, Normalize
 from albumentations.pytorch import ToTensorV2
 import sys
-import argparse
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
 import pathlib 
 from torch.utils.data import random_split, TensorDataset, DataLoader
 import torch.utils.data as data 
@@ -38,7 +34,6 @@ import argparse
 import yaml
 from pytorch_lightning.loggers import WandbLogger
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-import argparse
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from torchvision.models.detection.anchor_utils import AnchorGenerator
@@ -48,66 +43,37 @@ sys.path.append("..")
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from classes_dataset_DDSM import DDSM_DataModule
-from classes_model_DDSM import DDSM_CustomModel # Asegúrate de que esta importación es correcta
+from classes_model_DDSM import DDSM_CustomModel 
 from load_config import load_config, get_parameter
+
 
 
 def run_inference(data_module, output_folder, num_classes, model_path=None):
     """
     Realiza inferencia con un modelo Faster R-CNN en un conjunto de imágenes.
     Además, genera un CSV con las detecciones del modelo.
-
-    Args:
-        data_module (pytorch_lightning.core.datamodule.LightningDataModule): Instancia del DataModule ya configurado.
-        output_folder (str): Ruta a la carpeta donde se guardarán las imágenes con detecciones.
-        num_classes (int): Número total de clases que el modelo fue entrenado para predecir (incluyendo la clase de fondo).
-                           Debe coincidir con el num_classes usado en el entrenamiento.
-        model_path (str, optional): Ruta al archivo .pth del modelo entrenado. 
-                                    Si es None, se carga un modelo pre-entrenado de TorchVision (en COCO).
-        threshold (float, optional): Umbral de confianza para mostrar las detecciones y guardarlas en el CSV. 
-                                     Las detecciones con una puntuación inferior a este umbral se filtrarán.
     """
-
     print("Cargando el modelo...")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if model_path:
         try:
-            # *** CAMBIO CLAVE AQUÍ: Instancia DDSM_CustomModel directamente ***
-            # DDSM_CustomModel es tu clase de modelo personalizado (probablemente un LightningModule).
-            # Debe recibir 'config' y 'num_classes' (o los argumentos necesarios para construir la arquitectura).
-  
-    
-
-# Iterar en el dataset y calclar un histograma de tamaños con ancho, alto y relación de aspecto
-
-    
-    
             anchor_generator = AnchorGenerator(sizes=((12,),(16,), (32,), (64,), (128,), (256,),(512,), (1024,)), aspect_ratios=((0.5, 1.0, 1.5),)*5)
-            model = DDSM_CustomModel(fasterrcnn_resnet50_fpn(num_classes=2, weights_backbone=ResNet50_Weights.IMAGENET1K_V1, rpn_positive_iou_thresh=0.5,  # umbral para positivas
-            rpn_negative_iou_thresh=0.3,  # umbral para negativas
+            model = DDSM_CustomModel(fasterrcnn_resnet50_fpn(num_classes=2, weights_backbone=ResNet50_Weights.IMAGENET1K_V1, rpn_positive_iou_thresh=0.5,   # umbral para positivas
+            rpn_negative_iou_thresh=0.3,   # umbral para negativas
             rpn_anchor_generator = anchor_generator))
-
             
-            # Carga el state_dict en tu instancia de DDSM_CustomModel.
-            # DDSM_CustomModel es el encargado de tener la arquitectura interna correcta.
             model.load_state_dict(torch.load(model_path, map_location=device))
             print(f"Modelo entrenado cargado desde: {model_path} usando DDSM_CustomModel.")
         except Exception as e:
             print(f"Error al cargar el modelo desde {model_path} usando DDSM_CustomModel: {e}")
             print("Asegúrate de que 'DDSM_CustomModel' se inicializa con los mismos argumentos que durante el entrenamiento.")
-            sys.exit(1) # Termina la ejecución si hay un error crítico
+            sys.exit(1)
     else:
-        # Esto es para cargar el modelo COCO pre-entrenado por defecto (si model_path es None).
-        # Para este caso, el num_classes de COCO es 91 (+1 fondo), pero si tu intención es fine-tunear
-        # un modelo COCO para tus 5 clases, la lógica de abajo es para cuando NO usas tu modelo.
-        # Si num_classes siempre se ajusta (incluso para el modelo base), descomenta y ajusta el bloque.
         model = fasterrcnn_resnet50_fpn(pretrained=True)
-        # in_features = model.roi_heads.box_predictor.cls_score.in_features
-        # model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
         print("Modelo pre-entrenado de COCO cargado.")
 
-    model.eval() # Siempre en modo evaluación para inferencia
+    model.eval()
     model.to(device)
     print(f"Modelo listo para inferencia en {device}.")
 
@@ -129,20 +95,25 @@ def run_inference(data_module, output_folder, num_classes, model_path=None):
     image_idx = 0 
 
     for batch_idx, batch_data in enumerate(inference_dataloader):
-        images = batch_data[0] 
-        targets = batch_data[1]
+        images = batch_data[0] # Esto es una TUPLA de tensores de imagen
+        targets = batch_data[1] # Esto es una TUPLA de diccionarios de targets
 
-        images = [img.to(device) for img in images]
+
+        images = [img.to(device) for img in images] # Esto convierte la tupla de tensores a lista en el dispositivo.
         
         with torch.no_grad():
             predictions = model(images)
 
 
         for i, (image_tensor, prediction) in enumerate(zip(images, predictions)):
-            if isinstance(targets, list) and 'original_img_id_str' in targets[i]:
-                original_image_id = targets[i]['original_img_id_str']
-            elif isinstance(targets, list) and 'id' in targets[i]: 
-                original_image_id = targets[i]['id'].item()
+            # 'targets' es una tupla, y 'targets[i]' es el diccionario de target para la imagen actual.
+            current_image_target = targets[i] 
+
+            # Verificamos la existencia de las claves en el diccionario de target actual.
+            if 'original_img_id_str' in current_image_target:
+                original_image_id = current_image_target['original_img_id_str']
+            elif 'id' in current_image_target: 
+                original_image_id = current_image_target['id'].item()
             else:
                 original_image_id = f"batch_{batch_idx}_img_{i}"
 
@@ -179,6 +150,7 @@ def run_inference(data_module, output_folder, num_classes, model_path=None):
     print(f"\nCSV de detecciones guardado en: {detections_csv_path}")
 
 
+
 if __name__ == "__main__":
     output_folder = "/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/inference/inference_results"
 
@@ -203,5 +175,10 @@ if __name__ == "__main__":
     run_inference(
         data_module=data_module,
         output_folder=output_folder,
-        num_classes=2,
+        num_classes=5,
         model_path=mi_modelo_path)
+    
+
+
+
+    

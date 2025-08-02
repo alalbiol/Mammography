@@ -1,4 +1,3 @@
-from torch.utils.data import Dataset 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,26 +18,10 @@ from albumentations import Compose, Resize, Normalize
 from albumentations.pytorch import ToTensorV2
 
 
-# ______________________________________________________________ESTO ESTÁ BIEN_____________________________________________________________
-
-import pandas as pd
-import os
-from PIL import Image
-import numpy as np
-import torch
-
-def bounding_boxes_coord(img_id, labels_file):
-    """
-    Extracts bounding box coordinates for a given image ID from the labels file.
-    """
-    bounding_boxes = pd.read_csv(labels_file)
-    image_boxes = bounding_boxes[bounding_boxes["id"] == img_id]
-    boxes = image_boxes[["x_min", "y_min", "x_max", "y_max"]].values.tolist()
-    return boxes
 
 
 
-class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a partir de una caja que ya existe (heredación de clases)
+class DDSM_CustomDataset_3 (Dataset): #Voy a crear un dataset personalizado a partir de una caja que ya existe (heredación de clases)
     def __init__(self, img_dir, labels_file, transform=None, type=None): #Constructor de la clase, con variables propias de la clase
         self.image_dir = img_dir
         self.labels_file = labels_file
@@ -65,35 +48,16 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         plt.savefig('histograma_tamaño_grupos.png') # porque en .py no representa por estar usando el alien
 
 
-
-    def bounding_boxes_coord(self, id_imagen):
-
-        """Función para iterar sobre las filas de un DataFrame y dibujar rectángulos.
-        
-        Parameters:
-        group_df (DataFrame): DataFrame de un grupo específico.
-        # """
-
-        info_img = self.grouped_by_id.get_group(id_imagen)
-
-        boxes=[]
-
-        # Iterar sobre las filas del DataFrame
-        for index, row in info_img.iterrows():
-            # Obtener los valores de las columnas
-            x = row['x']
-            y = row['y']
-            w = row['w']
-            h = row['h']
-            
-            x_min = x
-            y_min = y
-            x_max = x + w
-            y_max = y + h
-
-            boxes.append([x_min, y_min, x_max, y_max])
-
+    def bounding_boxes_coord(self, img_id, labels_file):
+        """
+        Extracts bounding box coordinates for a given image ID from the labels file.
+        """
+        bounding_boxes = pd.read_csv(labels_file)
+        image_boxes = bounding_boxes[bounding_boxes["id"] == img_id]
+        boxes = image_boxes[["minx","miny","maxx","maxy"]].values.tolist()
         return boxes
+
+
 
 
 
@@ -110,7 +74,7 @@ class DDSM_CustomDataset (Dataset): #Voy a crear un dataset personalizado a part
         image= convert_16bit_to_8bit(image)  # Convertir a 8 bits
         image = np.expand_dims(image, axis=-1)
         image = np.repeat(image, 3, axis=-1)  # Convertir a 3 canales
-        boxes = self.bounding_boxes_coord(img_id)
+        boxes = self.bounding_boxes_coord(img_id, self.labels_file)
         boxes = np.array(boxes)
         labels = np.ones((boxes.shape[0],), dtype=np.long)
 
@@ -146,14 +110,14 @@ def get_train_dataloader(image_directory, bb, batch_size,num_workers, transform=
     #normalize = T.Compose([ T.ToTensor()])
 
     #dataset = DDSM_CustomDataset(split_csv, root_dir, return_mask= return_mask, patch_sampler = patch_sampler)
-    dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = transform, type = "train")
+    dataset = DDSM_CustomDataset_3(img_dir = image_directory, labels_file = bb, transform = transform, type = "train")
     print(len(dataset))
     dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)), shuffle=True) # shuffle --> para que los batches sean aleatorios
     # collate_fn --> para que funcionen las listas de diccionarios con los batches 
     return dataloader
 
 def get_test_dataloader(image_directory, bb, batch_size,num_workers, transform=None):
-    dataset = DDSM_CustomDataset(img_dir = image_directory, labels_file = bb, transform = transform, type = "test")
+    dataset = DDSM_CustomDataset_3(img_dir = image_directory, labels_file = bb, transform = transform, type = "test")
     dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, collate_fn= lambda x: tuple(zip(*x)), shuffle=True)
     return dataloader
 
@@ -179,7 +143,7 @@ def convert_16bit_to_8bit(image_16bit):
     return image_scaled
 
 #_________________________________________________________________________________________________________
-class DDSM_DataModule(L.LightningDataModule): # te hace los dataloaders automáticamente 
+class DDSM_DataModule_3(L.LightningDataModule): # te hace los dataloaders automáticamente 
     def __init__(self, config):
 
         super().__init__()
