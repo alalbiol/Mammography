@@ -124,9 +124,6 @@ if __name__ == '__main__':
         detected_malignant_gt_ids = set() # Para almacenar los IDs únicos de GT malignas detectadas
 
 
-       
-
-
         # Procesar imágenes una por una para este umbral
         for image_id in filtered_preds['id'].unique():
             preds_for_image = filtered_preds[filtered_preds['id'] == image_id].sort_values(by='score', ascending=False)
@@ -214,5 +211,5 @@ if __name__ == '__main__':
     else:
         normalized_froc_auc = 0.0 # Si no hay FPs, el área es 0
 
-    print(f"\nÁrea Bajo la Curva FROC normalizada (AUFROC): {normalized_froc_auc:.4f} 🚀") # Formato a 4 decimales
+    print(f"\nÁrea Bajo la Curva FROC normalizada (AUFROC): {normalized_froc_auc:.4f}") # Formato a 4 decimales
 

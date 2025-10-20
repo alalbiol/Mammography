@@ -1,0 +1,72 @@
+General:
+  source_root: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/proy_vgg16/
+  gpu_type: "RTX 3090" 
+
+Datamodule:
+  image_directory: /home/Data/CBIS-DDSM-segmentation-2240x1792/images
+  bb: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/proy_vgg16/data/bounding_boxes_trans.csv
+  labels_file: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/proy_vgg16/data/bounding_boxes_trans.csv
+  batch_size: 1
+  num_workers: 31
+  pin_memory: True
+
+
+Model:
+  weights_directory: /home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/proy_vgg16/VGG16.v2.pretrained_weights
+
+
+Logger:
+  type: wandb
+  project: ddsm_patch
+  name: patches_224
+  save_dir: /tmp/logs/ddsm_patch_224
+
+LightningModule:
+  model_name: resnet18
+  learning_rate: 0.001
+  optimizer_type: adam
+  num_classes: 3
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_options:
+    mode: min
+    factor: 0.5
+    patience: 20
+    min_lr: 1.e-8
+
+Trainer_opts:
+    max_epochs: 80
+
+Trainer:
+  SCALES: [1700,]
+  MAX_SIZE: 2100
+  RPN_POSITIVE_OVERLAP: 0.7
+  RPN_NEGATIVE_OVERLAP: 0.3
+  RPN_BATCHSIZE: 256
+  RPN_FG_FRACTION: 0.5
+  RPN_PRE_NMS_TOP_N: 12000
+  RPN_POST_NMS_TOP_N: 2000
+  RPN_NMS_THRESH: 0.7
+  BBOX_THRESH: 0.5
+  RPN_NMS_THRESH: 0.7
+
+
+Test:
+  RPN_PRE_NMS_TOP_N: 6000
+  RPN_POST_NMS_TOP_N: 300
+
+
+
+Callbacks:
+  VisualizeBatchImagesCallback:
+    num_rows: 1
+
+  ModelCheckpoint:
+    monitor: val_map
+    mode: max
+    save_top_k: 1
+    dirpath: /home/lloprib/model_checkpoints
+    filename: best_model
+    verbose: True
+  
+  
+  

@@ -52,14 +52,6 @@ import pandas as pd
 
 
 
-
-
-
-
-
-
-
-
 def transform_annotations_csv(input_csv_path, output_csv_path):
     """
     Transforma un CSV de anotaciones del formato (id, x, y, w, h, label, group) 
@@ -93,14 +85,13 @@ def transform_annotations_csv(input_csv_path, output_csv_path):
 
     # 3. Seleccionar y reordenar las columnas finales
     # AÑADIR 'group' aquí a la lista de columnas para la salida
-    output_df = df[['id', 'minx', 'miny', 'maxx', 'maxy', 'label', 'cancer', 'group']]
+    output_df = df[['id', 'minx', 'miny', 'maxx', 'maxy', 'w', 'h', 'label', 'cancer', 'group']]
 
     # 4. Guardar el nuevo CSV
     output_df.to_csv(output_csv_path, index=False)
-    print(f"CSV transformado guardado exitosamente en '{output_csv_path}' 🎉")
+    print(f"CSV transformado guardado exitosamente en '{output_csv_path}'")
 
 if __name__ == "__main__":
-    input_csv_file = '/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/train/bounding_boxes_fixed.csv' 
-    output_csv_file = '/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/pruebas_lucia/train/bounding_boxes_fixed_trans.csv'
-
+    input_csv_file = '/home/Data/CBIS-DDSM-segmentation-2240x1792/bounding_boxes.csv'
+    output_csv_file = '/home/lloprib/proyecto_mam/Mammography/Yolo8Mamo/proy_vgg16/data/bounding_boxes_trans.csv'
     transform_annotations_csv(input_csv_file, output_csv_file)
