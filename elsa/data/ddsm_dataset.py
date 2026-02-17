@@ -28,7 +28,7 @@ from utils.load_config import  get_parameter
 import gzip
 from utils.transforms import RandomContrast, RandomIntensity, Standardize
 import albumentations as A
-        
+import os        
 from utils.sample_patches_main import sample_positive_bb, sample_negative_bb,  sample_hard_negative_bb, sample_blob_negative_bb
 
 
@@ -1323,6 +1323,10 @@ class DDSMImageDataModule(pl.LightningDataModule):
         self.subset_size_train = get_parameter(config, ['Datamodule', 'subset_size_train'], default=None)
         self.subset_size_test = get_parameter(config, ['Datamodule', 'subset_size_test'], default=None)
         self.batch_size = get_parameter(config, ['Datamodule', 'batch_size'])
+
+        if os.getenv('BATCH_SIZE') is not None:
+            self.batch_size = int(os.getenv('BATCH_SIZE'))
+
         self.balanced_patches = get_parameter(config, ['Datamodule', 'balanced_patches'], default=False)
         self.num_workers = get_parameter(config, ['Datamodule', 'num_workers'])
         self.mixup_alpha = get_parameter(config, ['Datamodule', 'mixup_alpha'], default=None) # use mixup dataset for training

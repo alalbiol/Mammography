@@ -14,6 +14,7 @@ import yaml
 import wandb
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 import sys
 
@@ -40,6 +41,8 @@ class DDSMPatchClassifier(pl.LightningModule):
         
           # Fetch hyperparameters from config
         self.model_name = get_parameter(config, ["LightningModule", "model_name"])
+        if os.getenv("MODEL_NAME") is not None:
+            self.model_name = os.getenv("MODEL_NAME")
         self.model_params = get_parameter(config, ["LightningModule", "model_params"], default={})
         self.num_classes = get_parameter(config, ["LightningModule", "num_classes"])
         self.optimizer_type = get_parameter(config, ["LightningModule", "optimizer_type"])
@@ -384,6 +387,10 @@ def get_logger(config):
         options = {}
         options['project'] = get_parameter(config, ["Logger", "project"])
         options['name'] = get_parameter(config, ["Logger", "name"])
+
+        if os.getenv("JOB_NAME") is not None:
+            options['name'] = os.getenv("JOB_NAME")
+
         options['save_dir'] = get_parameter(config, ["Logger", "save_dir"])
         # Initialize the WandB logger
         logger = WandbLogger(**options)
@@ -473,6 +480,8 @@ if __name__ == "__main__":
     
     # Trainer
     trainer_kwargs = get_parameter(config, ["Trainer"], mode="default", default={})
+    if os.getenv("NUM_EPOCHS") is not None:
+        trainer_kwargs['max_epochs'] = int(os.getenv("NUM_EPOCHS"))
     
     print("Trainer kwargs: ", trainer_kwargs)
     
