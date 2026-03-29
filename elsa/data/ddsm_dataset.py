@@ -920,7 +920,7 @@ def get_train_dataloader(split_csv, ddsm_annotations, root_dir, patch_size, batc
     
     
     affine_transform = RandomAffineTransform()
-    #affine_transform = IdentityTransform()
+    # affine_transform = IdentityTransform()
 
 
     patch_sampler = PatchSampler(patch_size, affine_transform=affine_transform,
