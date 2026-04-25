@@ -11,19 +11,21 @@ else
     echo "Conda not found in the default directories"
 fi
 
-# Activate the Mammo environment
-conda activate Mammo
+# Activate the proymam environment
+conda activate proymam
 
 # Your commands here
-echo "Mammo environment activated"
+echo "proymam environment activated"
 
 
 cd ..
 echo "Current working directory: $(pwd)"
 
+# 1. ESCRIBE AQUÍ TU COMENTARIO PARA WANDB
+export WANDB_NOTES="Exp E03: ¿Focal Loss vs Cross-Entropy? Probando FL. ResNet50, parches 224x224, Num_Epochs=50, SN."
+
 #run experiments for resnet18, resnet34, resnet50 with 224x224 patches
 #enable Mammo conda environment
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_18.yaml
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_34.yaml
-python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_focalloss.yaml
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml
+python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_focalloss.yaml --job_name E03_FocalLoss

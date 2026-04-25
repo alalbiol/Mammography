@@ -12,7 +12,7 @@ Datamodule:
     ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
     patch_size: 224
     convert_to_rgb: True
-    include_normals: True
+    include_normals: False
     normalize_input: True
     pin_memory: True
 
@@ -57,12 +57,12 @@ Callbacks:
   #   verbose: True
   LearningRateMonitor:
     logging_interval: 'epoch'
-  # ModelCheckpoint:
-  #   monitor: val_loss
-  #   mode: min
-  #   save_top_k: 1
-  #   dirpath: /tmp/logs/ddsm_patch_224
-  #   filename: best_model
-  #   verbose: True
+    ModelCheckpoint:
+      monitor: val_loss
+      mode: min
+      save_top_k: 1
+      dirpath: /home/eblanov/tmp/logs/checkpoints
+      filename: "best_model_epoch_{epoch:02d}_loss_{val_loss:.3f}_auroc_{val_auroc:.3f}"
+      verbose: True
   
   
