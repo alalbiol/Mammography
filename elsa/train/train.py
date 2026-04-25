@@ -249,7 +249,7 @@ class DDSMPatchClassifier(pl.LightningModule):
     def on_train_epoch_end(self):
         super().on_train_epoch_end()
         self.train_confusion_matrix.compute()
-        fig, ax = self.train_confusion_matrix.plot()
+        fig, ax = self.train_confusion_matrix.plot(cmap="Blues")
         
         if isinstance(self.trainer.logger,WandbLogger):                
             experiment = self.logger.experiment
@@ -316,7 +316,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         self.total.zero_()
         
         self.val_confusion_matrix.compute()
-        fig, ax = self.val_confusion_matrix.plot() 
+        fig, ax = self.val_confusion_matrix.plot(cmap="Blues") 
         if isinstance( self.trainer.logger, WandbLogger):     
             experiment = self.logger.experiment
             experiment.log({"val/val confusion_matrix": wandb.Image(fig2img(fig))})
@@ -441,7 +441,7 @@ def create_callbacks(config):
             raise NotImplementedError(f"Unknown callback {callback_name}")
     return callbacks
 
-
+    
 
 # Training the model
 if __name__ == "__main__":
@@ -450,18 +450,32 @@ if __name__ == "__main__":
     parser.add_argument("--config_file", type=str, required=True, help="Path to the configuration file.")
     parser.add_argument("--overrides", type=str, default = None, help="Overrides for the configuration file.")
     parser.add_argument("--logger", type=str_to_bool, default=True, help="Use wandb for logging.")
+    
+    # 1. AÑADE ESTOS DOS ARGUMENTOS NUEVOS
+    parser.add_argument("--batch_size", type=int, default=None, help="Override batch size directly.")
+    parser.add_argument("--job_name", type=str, default=None, help="Override wandb job name directly.")
+    
     args = parser.parse_args()
 
     # Load configuration from YAML file
     config = load_config(args.config_file, override_file=args.overrides) 
     
+    # 2. AÑADE ESTA LÓGICA PARA SOBRESCRIBIR EL CONFIG
+    if args.batch_size is not None:
+        if "Datamodule" not in config:
+            config["Datamodule"] = {}
+        config["Datamodule"]["batch_size"] = args.batch_size
+        
+    if args.job_name is not None:
+        os.environ["JOB_NAME"] = args.job_name 
+    
     from pprint import pprint
     pprint(config)
-   
-    GPU_TYPE = get_parameter(config, ["General", "gpu_type"],"None")
+    
+    # ... (EL RESTO DE TU CÓDIGO SE MANTIENE EXACTAMENTE IGUAL A PARTIR DE AQUÍ)
+    GPU_TYPE = get_parameter(config, ["General", "gpu_type"],"None")   
     if GPU_TYPE == "RTX 3090" or GPU_TYPE == "RTX 5090":
         torch.set_float32_matmul_precision('medium') # recomended for RTX 3090
-   
     
     
     # Set up model, data module, logger, and checkpoint callback

@@ -13,22 +13,23 @@ fi
 
 # Activate the Mammo environment
 conda activate proymam
-
-# Your commands here
 echo "proymam environment activated"
 
 
 cd ..
 echo "Current working directory: $(pwd)"
 
+# 1. ESCRIBE AQUÍ TU COMENTARIO PARA WANDB
+export WANDB_NOTES="Exp E01: ¿Batch optimo? Probando BS=35. ResNet50, parches 224x224, Num_Epochs=50."
+
+# 2. LANZA EL EXPERIMENTO
+NUM_EPOCHS=50 python train/train.py \
+    --config_file config_files/base_config.yaml \
+    --overrides config_files/resnet/resnet_50.yaml \
+    --batch_size 35 \
+    --job_name "E01_BS_35"
+
 #run experiments for resnet18, resnet34, resnet50 with 224x224 patches
 #enable Mammo conda environment
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_18.yaml
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_34.yaml
-python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_bn.yaml
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals.yaml
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_wo_normals_WC.yaml
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_lrwarmup.yaml
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml #--logger false
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_mixup.yaml #--logger false
+# python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml

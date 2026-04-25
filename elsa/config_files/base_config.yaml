@@ -4,7 +4,7 @@ General:
 
 Datamodule:
   num_classes: 5
-  batch_size: 60
+  batch_size: 16
   num_workers: 16
   train_set:
     ddsm_root: /home/Data/mamo/DDSM_png_16bit_1120x896 # he cambiado DDSM_png_1152x896 a DDSM_png_16bit_1120x896
@@ -30,7 +30,7 @@ Logger:
   save_dir: /home/eblanov/tmp/logs/ddsm_patch_224
 
 LightningModule:
-  model_name: resnet18
+  model_name: resnet50
   learning_rate: 0.001
   optimizer_type: adam
   num_classes: 5
