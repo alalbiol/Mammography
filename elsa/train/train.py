@@ -362,7 +362,7 @@ class DDSMPatchClassifier(pl.LightningModule):
         # self.val_AUROC_4.reset()
                     
     # def configure_gradient_clipping(self, optimizer, gradient_clip_val, gradient_clip_algorithm):
-    #     super().configure_gradient_clipping(optimizer, gradient_clip_val, gradient_clip_algorithm)
+    #     super().configure_gradient_clipping(optimizer, grSadient_clip_val, gradient_clip_algorithm)
         
     #     trainer = self.trainer
     #     pl_module = self
