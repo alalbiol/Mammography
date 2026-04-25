@@ -12,7 +12,7 @@ Datamodule:
     ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
     patch_size: 224
     convert_to_rgb: True
-    include_normals: False
+    include_normals: True
     normalize_input: True
     pin_memory: True
 

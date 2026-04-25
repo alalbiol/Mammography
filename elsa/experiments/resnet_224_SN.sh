@@ -20,7 +20,8 @@ cd ..
 echo "Current working directory: $(pwd)"
 
 # 1. ESCRIBE AQUÍ TU COMENTARIO PARA WANDB
-export WANDB_NOTES="Exp E02: ¿Añadimos imágenes normales Probando SN. ResNet50, parches 224x224, Num_Epochs=50."
+export WANDB_NOTES="Exp E02: ¿Añadimos imágenes normales Probando CN. ResNet50, parches 224x224, Num_Epochs=50."
 
 
-python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml
+python train/train.py --config_file config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml --job_name E02_CN
+N
