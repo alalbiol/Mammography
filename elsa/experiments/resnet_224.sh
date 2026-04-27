@@ -20,16 +20,19 @@ cd ..
 echo "Current working directory: $(pwd)"
 
 # 1. ESCRIBE AQUÍ TU COMENTARIO PARA WANDB
-export WANDB_NOTES="Exp E01: ¿Batch optimo? Probando BS=100. ResNet50, parches 224x224, Num_Epochs=50."
+export WANDB_NOTES="Exp E03: ¿Focal Loss vs Cross-Entropy? Probando CE. ResNet50, parches 224x224, Num_Epochs=50, SN."
+
 
 # 2. LANZA EL EXPERIMENTO
-NUM_EPOCHS=50 python train/train.py \
-    --config_file config_files/base_config.yaml \
-    --overrides config_files/resnet/resnet_50.yaml \
-    --batch_size 100 \
-    --job_name "E01_BS_100"
+# NUM_EPOCHS=50 python train/train.py \
+    #--config_file config_files/base_config.yaml \
+    #--overrides config_files/resnet/resnet_50.yaml \
+    #--batch_size 100 \
+    #--job_name "E01_BS_100"
 
 #run experiments for resnet18, resnet34, resnet50 with 224x224 patches
 #enable Mammo conda environment
 #python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_34.yaml
 # python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml
+
+python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50.yaml --job_name E03_CE
