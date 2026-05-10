@@ -20,7 +20,7 @@ cd ..
 echo "Current working directory: $(pwd)"
 
 # 1. ESCRIBE AQUÍ TU COMENTARIO PARA WANDB
-export WANDB_NOTES="Exp E01: ¿Con normales? BS=125. ResNet50, parches 224x224, Num_Epochs=250."
+export WANDB_NOTES="Exp E03: ¿Funcion de perdidas? BS=125. ResNet50, parches 224x224, Num_Epochs=250."
 
 # 2. LANZA EL EXPERIMENTO
 NUM_EPOCHS=250 python train/train.py \

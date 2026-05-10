@@ -1,5 +1,7 @@
 Datamodule:
   patch_size: 224
+  train_set:
+    include_normals: False
 
 Logger:
   name: model_resnet50_focalloss_224
