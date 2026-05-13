@@ -1,0 +1,28 @@
+Datamodule:
+  patch_size: 224
+  train_set:
+    include_normals: False
+
+Logger:
+  name: model_resnet50_focalloss_224
+  save_dir: /home/eblanov/tmp/logs/model_resnet50_focalloss_224
+
+
+LightningModule:
+  model_name: resnet50
+  loss_name: focal
+  loss_params:
+    gamma: 0.5
+    alpha: [0.25,1,1,1,1]
+
+
+Trainer:
+  max_epochs: 250
+  gradient_clip_val: 1.0
+
+Callbacks:
+  ModelCheckpoint:
+    dirpath: /home/eblanov/tmp/logs/model_resnet50_focalloss_224
+    monitor: val_auroc
+    mode: max
+    save_top_k: 1

@@ -22,16 +22,44 @@ cd ..
 echo "Current working directory: $(pwd)"
 
 # 1. ESCRIBE AQUÍ TU COMENTARIO PARA WANDB
-export WANDB_NOTES="Exp E03: ¿Focal Loss vs Cross-Entropy? Probando FL. ResNet50, parches 224x224, Num_Epochs=250, SN."
+export WANDB_NOTES="Exp E03: ¿Focal Loss vs Cross-Entropy? Probando FL con gamma=0.5 y alpha. ResNet50, parches 224x224, Num_Epochs=250, SN."
 
-#run experiments for resnet18, resnet34, resnet50 with 224x224 patches
-#enable Mammo conda environment
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_18.yaml
-#python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_34.yaml
-# python train/train.py --config config_files/base_config.yaml --overrides config_files/resnet/resnet_50_focalloss.yaml --job_name E03_FocalLoss
+# 2. EJECUTA EL EXPERIMENTO
 
+# alpha=[1,1,1,1,1]
 NUM_EPOCHS=250 python train/train.py \
     --config_file config_files/base_config.yaml \
-    --overrides config_files/resnet/resnet_50_focalloss.yaml \
+    --overrides config_files/resnet/resnet_50_FL_1.yaml \
     --batch_size 125 \
-    --job_name "E03_FocalLoss"
+    --job_name "E03_FLG05_A11111" 
+
+# alpha=[0.5,1,1,1,1]
+NUM_EPOCHS=250 python train/train.py \
+    --config_file config_files/base_config.yaml \
+    --overrides config_files/resnet/resnet_50_FL_051.yaml \
+    --batch_size 125 \
+    --job_name "E03_FLG05_A051111" 
+
+# alpha=[0.5,1,1,2,2]
+NUM_EPOCHS=250 python train/train.py \
+    --config_file config_files/base_config.yaml \
+    --overrides config_files/resnet/resnet_50_FL_052.yaml \
+    --batch_size 125 \
+    --job_name "E03_FLG05_A051122" 
+
+
+# alpha=[0.25,1,1,1,1]
+NUM_EPOCHS=250 python train/train.py \
+    --config_file config_files/base_config.yaml \
+    --overrides config_files/resnet/resnet_50_FL_025.yaml \
+    --batch_size 125 \
+    --job_name "E03_FLG05_A0251111" 
+
+
+# alpha=[1,1,1,2,2]
+NUM_EPOCHS=250 python train/train.py \
+    --config_file config_files/base_config.yaml \
+    --overrides config_files/resnet/resnet_50_FL_12.yaml \
+    --batch_size 125 \
+    --job_name "E03_FLG05_A11122" 
+

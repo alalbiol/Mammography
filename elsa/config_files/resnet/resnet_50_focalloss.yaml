@@ -12,10 +12,17 @@ LightningModule:
   model_name: resnet50
   loss_name: focal
   loss_params:
-    gamma: 2.0
+    gamma: 0.5
+    alpha: [0.25, 1.0, 1.0, 1.0, 1.0]
 
 
+Trainer:
+  max_epochs: 250
+  gradient_clip_val: 1.0
 
-#Callbacks:
-#  ModelCheckpoint:
-#    dirpath: /tmp/logs/model_resnet50_focalloss_224
+Callbacks:
+  ModelCheckpoint:
+    dirpath: /home/eblanov/tmp/logs/model_resnet50_focalloss_224
+    monitor: val_auroc
+    mode: max
+    save_top_k: 1

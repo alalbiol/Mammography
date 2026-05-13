@@ -92,12 +92,16 @@ class FocalLoss(nn.Module):
             torch.Tensor: Computed focal loss.
         """
         # Convert logits to probabilities
-        probs = F.softmax(logits, dim=1)
+        # probs = F.softmax(logits, dim=1)
         # Get the probabilities of the target classes
-        target_probs = probs.gather(1, targets.unsqueeze(1)).squeeze(1)
+        # target_probs = probs.gather(1, targets.unsqueeze(1)).squeeze(1)
+        log_probs = F.log_softmax(logits, dim=1)
+        target_log_probs = log_probs.gather(1, targets.unsqueeze(1)).squeeze(1)
+        target_probs = target_log_probs.exp()
         
         # Compute the focal weight
-        focal_weight = (1 - target_probs) ** self.gamma
+        # focal_weight = (1 - target_probs) ** self.gamma
+        focal_weight = (1 - target_probs.detach()) ** self.gamma
         
         # Apply alpha if specified
         if self.alpha is not None:
@@ -106,7 +110,11 @@ class FocalLoss(nn.Module):
             focal_weight *= alpha_factor
         
         # Compute the focal loss
-        loss = -focal_weight * torch.log(target_probs)
+        # loss = -focal_weight * torch.log(target_probs)
+        # print("target_probs min/max:", target_probs.min().item(), target_probs.max().item())
+        # print("focal_weight min/max:", focal_weight.min().item(), focal_weight.max().item())
+        # loss = -focal_weight * torch.log(target_probs + 1e-8)
+        loss = -focal_weight * target_log_probs
         
         # Apply reduction
         if self.reduction == 'mean':
