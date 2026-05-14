@@ -1,0 +1,774 @@
+nohup: ignoring input
+proymam environment activated
+Working directory: /home/eblanov/proymam2/Mammography/elsa
+
+================================================
+ Lanzando E04_S1 | Swin | LR = 1e-4
+================================================
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/albumentations/__init__.py:28: UserWarning: A new version of Albumentations is available: '2.0.8' (you have '2.0.5'). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.
+  check_for_updates()
+2026-05-14 20:12:43.819339: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-05-14 20:12:43.970611: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1778782364.021842  288159 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1778782364.037262  288159 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1778782364.165516  288159 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782364.165533  288159 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782364.165535  288159 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782364.165536  288159 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2026-05-14 20:12:44.181082: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+HPU available: False, using: 0 HPUs
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Currently logged in as: eblanov (eblanov-universitat-polit-cnica-de-val-ncia) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: creating run
+wandb: Tracking run with wandb version 0.19.9
+wandb: Run data is saved locally in /home/eblanov/tmp/logs/E04_Swin_LR1e-4/wandb/run-20260514_201246-4kkwi86c
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run E04_Swin_LR1e-4
+wandb: ⭐️ View project at https://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch
+wandb: 🚀 View run at https://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch/runs/4kkwi86c
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/callbacks/model_checkpoint.py:654: Checkpoint directory /home/eblanov/tmp/logs/E04_Swin_LR1e-4 exists and is not empty.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+
+  | Name                   | Type                      | Params | Mode 
+-----------------------------------------------------------------------------
+0 | model                  | SwinTransformer           | 195 M  | train
+1 | loss_fn                | CrossEntropyLoss          | 0      | train
+2 | train_accuracy         | MulticlassAccuracy        | 0      | train
+3 | val_accuracy           | MulticlassAccuracy        | 0      | train
+4 | val_confusion_matrix   | MulticlassConfusionMatrix | 0      | train
+5 | train_confusion_matrix | MulticlassConfusionMatrix | 0      | train
+-----------------------------------------------------------------------------
+195 M     Trainable params
+0         Non-trainable params
+195 M     Total params
+780.013   Total estimated model params size (MB)
+470       Modules in train mode
+0         Modules in eval mode
+{'Callbacks': {'LearningRateMonitor': {'logging_interval': 'epoch'},
+               'ModelCheckpoint': {'dirpath': '/home/eblanov/tmp/logs/E04_Swin_LR1e-4',
+                                   'filename': 'best_{epoch}-{val_auroc:.4f}',
+                                   'mode': 'max',
+                                   'monitor': 'val_auroc',
+                                   'save_top_k': 3,
+                                   'verbose': True},
+               'ReduceLROnEpochsCallback': {'every_n_epochs': 3,
+                                            'factor': 0.5,
+                                            'min_lr': 5e-06}},
+ 'Datamodule': {'batch_size': 125,
+                'num_classes': 5,
+                'num_workers': 16,
+                'pin_memory': True,
+                'train_set': {'convert_to_rgb': True,
+                              'ddsm_annotations': 'resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz',
+                              'ddsm_root': '/home/Data/mamo/DDSM_png_16bit_1120x896',
+                              'include_normals': False,
+                              'normalize_input': True,
+                              'patch_size': 224,
+                              'split_csv': 'resources/ddsm/DDSM_train.csv'},
+                'val_set': {'eval_patches_root': '/home/Data/mamo/eval_patches_16bits_224_test_nikulin'}},
+ 'General': {'gpu_type': 'RTX 5090',
+             'source_root': '/home/eblanov/proymam2/Mammography/elsa'},
+ 'LightningModule': {'learning_rate': 0.0001,
+                     'loss_name': 'cross_entropy',
+                     'model_name': 'swin_large_patch4_window7_224.ms_in22k',
+                     'model_params': {'image_size': 224,
+                                      'pretrained': True,
+                                      'trainable_gray2RGB': False},
+                     'num_classes': 5,
+                     'optimizer_type': 'adam'},
+ 'Logger': {'name': 'E04_Swin_LR1e-4',
+            'project': 'ddsm_patch',
+            'save_dir': '/home/eblanov/tmp/logs/E04_Swin_LR1e-4',
+            'type': 'wandb'},
+ 'Trainer': {'max_epochs': 250}}
+Using Swin Transformer model: swin_large_patch4_window7_224.ms_in22k
+Arguments: {'pretrained': True, 'image_size': 224, 'trainable_gray2RGB': False}
+Using CrossEntropy loss
+kwargs:  {}
+Source root:  /home/eblanov/proymam2/Mammography/elsa
+split csv:  resources/ddsm/DDSM_train.csv
+ddsm annotations:  resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+Trainer kwargs:  {'max_epochs': 250}
+Sanity Checking: |          | 0/? [00:00<?, ?it/s]/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/connectors/data_connector.py:476: Your `val_dataloader`'s sampler has shuffling enabled, it is strongly recommended that you turn shuffling off for val/test dataloaders.
+Number of samples after filtering:  1119
+Sanity Checking:   0%|          | 0/2 [00:00<?, ?it/s]Sanity Checking DataLoader 0:   0%|          | 0/2 [00:00<?, ?it/s]Sanity Checking DataLoader 0:  50%|█████     | 1/2 [00:00<00:00,  2.90it/s]Sanity Checking DataLoader 0: 100%|██████████| 2/2 [00:00<00:00,  3.85it/s]                                                                           loading annotations
+Number of annotations:  4664
+Number of annotations after filtering split:  3988
+Number of abnormal annotations:  3988
+Not including normal images
+Number of annotations after filtering OTHER_BENIGN (18 in total)  3970
+Number of classes:  5
+Batch size:  125
+Training: |          | 0/? [00:00<?, ?it/s]Training:   0%|          | 0/64 [00:00<?, ?it/s]Epoch 0:   0%|          | 0/64 [00:00<?, ?it/s] Traceback (most recent call last):
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 510, in <module>
+    trainer.fit(model, data_module)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 561, in fit
+    call._call_and_handle_interrupt(
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 48, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 599, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 1012, in _run
+    results = self._run_stage()
+              ^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 1056, in _run_stage
+    self.fit_loop.run()
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/fit_loop.py", line 216, in run
+    self.advance()
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/fit_loop.py", line 455, in advance
+    self.epoch_loop.run(self._data_fetcher)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 150, in run
+    self.advance(data_fetcher)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 320, in advance
+    batch_output = self.automatic_optimization.run(trainer.optimizers[0], batch_idx, kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 192, in run
+    self._optimizer_step(batch_idx, closure)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 270, in _optimizer_step
+    call._call_lightning_module_hook(
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 176, in _call_lightning_module_hook
+    output = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/core/module.py", line 1302, in optimizer_step
+    optimizer.step(closure=optimizer_closure)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/core/optimizer.py", line 154, in step
+    step_output = self._strategy.optimizer_step(self._optimizer, closure, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/strategies/strategy.py", line 239, in optimizer_step
+    return self.precision_plugin.optimizer_step(optimizer, model=model, closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/plugins/precision/precision.py", line 123, in optimizer_step
+    return optimizer.step(closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/optimizer.py", line 504, in wrapper
+    out = func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/optimizer.py", line 79, in _use_grad
+    ret = func(self, *args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/adam.py", line 226, in step
+    loss = closure()
+           ^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/plugins/precision/precision.py", line 109, in _wrap_closure
+    closure_result = closure()
+                     ^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 146, in __call__
+    self._result = self.closure(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 131, in closure
+    step_output = self._step_fn()
+                  ^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 319, in _training_step
+    training_step_output = call._call_strategy_hook(trainer, "training_step", *kwargs.values())
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 328, in _call_strategy_hook
+    output = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/strategies/strategy.py", line 391, in training_step
+    return self.lightning_module.training_step(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 160, in training_step
+    logits = self(x)
+             ^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 141, in forward
+    return self.model(x)
+           ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 838, in forward
+    x = self.forward_features(x)
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 830, in forward_features
+    x = self.layers(x)
+        ^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 559, in forward
+    x = self.blocks(x)
+        ^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 408, in forward
+    x = x + self.drop_path2(self.mlp(self.norm2(x)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/layers/mlp.py", line 44, in forward
+    x = self.fc1(x)
+        ^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 0 has a total capacity of 31.36 GiB of which 236.69 MiB is free. Including non-PyTorch memory, this process has 31.08 GiB memory in use. Of the allocated memory 29.85 GiB is allocated by PyTorch, and 656.24 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mE04_Swin_LR1e-4[0m at: [34mhttps://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch/runs/4kkwi86c[0m
+[1;34mwandb[0m: Find logs at: [1;35m../../../tmp/logs/E04_Swin_LR1e-4/wandb/run-20260514_201246-4kkwi86c/logs[0m
+E04_S1 finalizado.
+
+================================================
+ Lanzando E04_S2 | Swin | LR = 5e-5
+================================================
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/albumentations/__init__.py:28: UserWarning: A new version of Albumentations is available: '2.0.8' (you have '2.0.5'). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.
+  check_for_updates()
+2026-05-14 20:13:06.687455: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-05-14 20:13:06.694386: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1778782386.701734  472570 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1778782386.704189  472570 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1778782386.710963  472570 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782386.710983  472570 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782386.710986  472570 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782386.710989  472570 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2026-05-14 20:13:06.712931: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+HPU available: False, using: 0 HPUs
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Currently logged in as: eblanov (eblanov-universitat-polit-cnica-de-val-ncia) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.19.9
+wandb: Run data is saved locally in /home/eblanov/tmp/logs/E04_Swin_LR5e-5/wandb/run-20260514_201308-axt1p1vv
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run E04_Swin_LR5e-5
+wandb: ⭐️ View project at https://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch
+wandb: 🚀 View run at https://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch/runs/axt1p1vv
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/callbacks/model_checkpoint.py:654: Checkpoint directory /home/eblanov/tmp/logs/E04_Swin_LR5e-5 exists and is not empty.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+
+  | Name                   | Type                      | Params | Mode 
+-----------------------------------------------------------------------------
+0 | model                  | SwinTransformer           | 195 M  | train
+1 | loss_fn                | CrossEntropyLoss          | 0      | train
+2 | train_accuracy         | MulticlassAccuracy        | 0      | train
+3 | val_accuracy           | MulticlassAccuracy        | 0      | train
+4 | val_confusion_matrix   | MulticlassConfusionMatrix | 0      | train
+5 | train_confusion_matrix | MulticlassConfusionMatrix | 0      | train
+-----------------------------------------------------------------------------
+195 M     Trainable params
+0         Non-trainable params
+195 M     Total params
+780.013   Total estimated model params size (MB)
+470       Modules in train mode
+0         Modules in eval mode
+{'Callbacks': {'LearningRateMonitor': {'logging_interval': 'epoch'},
+               'ModelCheckpoint': {'dirpath': '/home/eblanov/tmp/logs/E04_Swin_LR5e-5',
+                                   'filename': 'best_{epoch}-{val_auroc:.4f}',
+                                   'mode': 'max',
+                                   'monitor': 'val_auroc',
+                                   'save_top_k': 3,
+                                   'verbose': True},
+               'ReduceLROnEpochsCallback': {'every_n_epochs': 3,
+                                            'factor': 0.5,
+                                            'min_lr': 5e-06}},
+ 'Datamodule': {'batch_size': 125,
+                'num_classes': 5,
+                'num_workers': 16,
+                'pin_memory': True,
+                'train_set': {'convert_to_rgb': True,
+                              'ddsm_annotations': 'resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz',
+                              'ddsm_root': '/home/Data/mamo/DDSM_png_16bit_1120x896',
+                              'include_normals': False,
+                              'normalize_input': True,
+                              'patch_size': 224,
+                              'split_csv': 'resources/ddsm/DDSM_train.csv'},
+                'val_set': {'eval_patches_root': '/home/Data/mamo/eval_patches_16bits_224_test_nikulin'}},
+ 'General': {'gpu_type': 'RTX 5090',
+             'source_root': '/home/eblanov/proymam2/Mammography/elsa'},
+ 'LightningModule': {'learning_rate': 5e-05,
+                     'loss_name': 'cross_entropy',
+                     'model_name': 'swin_large_patch4_window7_224.ms_in22k',
+                     'model_params': {'image_size': 224,
+                                      'pretrained': True,
+                                      'trainable_gray2RGB': False},
+                     'num_classes': 5,
+                     'optimizer_type': 'adam'},
+ 'Logger': {'name': 'E04_Swin_LR5e-5',
+            'project': 'ddsm_patch',
+            'save_dir': '/home/eblanov/tmp/logs/E04_Swin_LR5e-5',
+            'type': 'wandb'},
+ 'Trainer': {'max_epochs': 250}}
+Using Swin Transformer model: swin_large_patch4_window7_224.ms_in22k
+Arguments: {'pretrained': True, 'image_size': 224, 'trainable_gray2RGB': False}
+Using CrossEntropy loss
+kwargs:  {}
+Source root:  /home/eblanov/proymam2/Mammography/elsa
+split csv:  resources/ddsm/DDSM_train.csv
+ddsm annotations:  resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+Trainer kwargs:  {'max_epochs': 250}
+Sanity Checking: |          | 0/? [00:00<?, ?it/s]/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/connectors/data_connector.py:476: Your `val_dataloader`'s sampler has shuffling enabled, it is strongly recommended that you turn shuffling off for val/test dataloaders.
+Number of samples after filtering:  1119
+Sanity Checking:   0%|          | 0/2 [00:00<?, ?it/s]Sanity Checking DataLoader 0:   0%|          | 0/2 [00:00<?, ?it/s]Sanity Checking DataLoader 0:  50%|█████     | 1/2 [00:00<00:00,  2.92it/s]Sanity Checking DataLoader 0: 100%|██████████| 2/2 [00:00<00:00,  3.88it/s]                                                                           loading annotations
+Number of annotations:  4664
+Number of annotations after filtering split:  3988
+Number of abnormal annotations:  3988
+Not including normal images
+Number of annotations after filtering OTHER_BENIGN (18 in total)  3970
+Number of classes:  5
+Batch size:  125
+Training: |          | 0/? [00:00<?, ?it/s]Training:   0%|          | 0/64 [00:00<?, ?it/s]Epoch 0:   0%|          | 0/64 [00:00<?, ?it/s] Traceback (most recent call last):
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 510, in <module>
+    trainer.fit(model, data_module)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 561, in fit
+    call._call_and_handle_interrupt(
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 48, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 599, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 1012, in _run
+    results = self._run_stage()
+              ^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 1056, in _run_stage
+    self.fit_loop.run()
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/fit_loop.py", line 216, in run
+    self.advance()
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/fit_loop.py", line 455, in advance
+    self.epoch_loop.run(self._data_fetcher)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 150, in run
+    self.advance(data_fetcher)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 320, in advance
+    batch_output = self.automatic_optimization.run(trainer.optimizers[0], batch_idx, kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 192, in run
+    self._optimizer_step(batch_idx, closure)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 270, in _optimizer_step
+    call._call_lightning_module_hook(
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 176, in _call_lightning_module_hook
+    output = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/core/module.py", line 1302, in optimizer_step
+    optimizer.step(closure=optimizer_closure)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/core/optimizer.py", line 154, in step
+    step_output = self._strategy.optimizer_step(self._optimizer, closure, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/strategies/strategy.py", line 239, in optimizer_step
+    return self.precision_plugin.optimizer_step(optimizer, model=model, closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/plugins/precision/precision.py", line 123, in optimizer_step
+    return optimizer.step(closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/optimizer.py", line 504, in wrapper
+    out = func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/optimizer.py", line 79, in _use_grad
+    ret = func(self, *args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/adam.py", line 226, in step
+    loss = closure()
+           ^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/plugins/precision/precision.py", line 109, in _wrap_closure
+    closure_result = closure()
+                     ^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 146, in __call__
+    self._result = self.closure(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 131, in closure
+    step_output = self._step_fn()
+                  ^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 319, in _training_step
+    training_step_output = call._call_strategy_hook(trainer, "training_step", *kwargs.values())
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 328, in _call_strategy_hook
+    output = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/strategies/strategy.py", line 391, in training_step
+    return self.lightning_module.training_step(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 160, in training_step
+    logits = self(x)
+             ^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 141, in forward
+    return self.model(x)
+           ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 838, in forward
+    x = self.forward_features(x)
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 830, in forward_features
+    x = self.layers(x)
+        ^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 559, in forward
+    x = self.blocks(x)
+        ^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 408, in forward
+    x = x + self.drop_path2(self.mlp(self.norm2(x)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/layers/mlp.py", line 44, in forward
+    x = self.fc1(x)
+        ^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 0 has a total capacity of 31.36 GiB of which 236.69 MiB is free. Including non-PyTorch memory, this process has 31.08 GiB memory in use. Of the allocated memory 29.85 GiB is allocated by PyTorch, and 656.24 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mE04_Swin_LR5e-5[0m at: [34mhttps://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch/runs/axt1p1vv[0m
+[1;34mwandb[0m: Find logs at: [1;35m../../../tmp/logs/E04_Swin_LR5e-5/wandb/run-20260514_201308-axt1p1vv/logs[0m
+E04_S2 finalizado.
+
+================================================
+ Lanzando E04_S3 | Swin | LR = 1e-5
+================================================
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/albumentations/__init__.py:28: UserWarning: A new version of Albumentations is available: '2.0.8' (you have '2.0.5'). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.
+  check_for_updates()
+2026-05-14 20:13:26.885754: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-05-14 20:13:26.892553: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1778782406.899907  656908 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1778782406.902432  656908 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1778782406.909180  656908 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782406.909200  656908 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782406.909203  656908 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1778782406.909204  656908 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2026-05-14 20:13:26.911103: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+HPU available: False, using: 0 HPUs
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Currently logged in as: eblanov (eblanov-universitat-polit-cnica-de-val-ncia) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.19.9
+wandb: Run data is saved locally in /home/eblanov/tmp/logs/E04_Swin_LR1e-5/wandb/run-20260514_201328-itoyl6hg
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run E04_Swin_LR1e-5
+wandb: ⭐️ View project at https://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch
+wandb: 🚀 View run at https://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch/runs/itoyl6hg
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/callbacks/model_checkpoint.py:654: Checkpoint directory /home/eblanov/tmp/logs/E04_Swin_LR1e-5 exists and is not empty.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+
+  | Name                   | Type                      | Params | Mode 
+-----------------------------------------------------------------------------
+0 | model                  | SwinTransformer           | 195 M  | train
+1 | loss_fn                | CrossEntropyLoss          | 0      | train
+2 | train_accuracy         | MulticlassAccuracy        | 0      | train
+3 | val_accuracy           | MulticlassAccuracy        | 0      | train
+4 | val_confusion_matrix   | MulticlassConfusionMatrix | 0      | train
+5 | train_confusion_matrix | MulticlassConfusionMatrix | 0      | train
+-----------------------------------------------------------------------------
+195 M     Trainable params
+0         Non-trainable params
+195 M     Total params
+780.013   Total estimated model params size (MB)
+470       Modules in train mode
+0         Modules in eval mode
+{'Callbacks': {'LearningRateMonitor': {'logging_interval': 'epoch'},
+               'ModelCheckpoint': {'dirpath': '/home/eblanov/tmp/logs/E04_Swin_LR1e-5',
+                                   'filename': 'best_{epoch}-{val_auroc:.4f}',
+                                   'mode': 'max',
+                                   'monitor': 'val_auroc',
+                                   'save_top_k': 3,
+                                   'verbose': True},
+               'ReduceLROnEpochsCallback': {'every_n_epochs': 3,
+                                            'factor': 0.5,
+                                            'min_lr': 1e-06}},
+ 'Datamodule': {'batch_size': 125,
+                'num_classes': 5,
+                'num_workers': 16,
+                'pin_memory': True,
+                'train_set': {'convert_to_rgb': True,
+                              'ddsm_annotations': 'resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz',
+                              'ddsm_root': '/home/Data/mamo/DDSM_png_16bit_1120x896',
+                              'include_normals': False,
+                              'normalize_input': True,
+                              'patch_size': 224,
+                              'split_csv': 'resources/ddsm/DDSM_train.csv'},
+                'val_set': {'eval_patches_root': '/home/Data/mamo/eval_patches_16bits_224_test_nikulin'}},
+ 'General': {'gpu_type': 'RTX 5090',
+             'source_root': '/home/eblanov/proymam2/Mammography/elsa'},
+ 'LightningModule': {'learning_rate': 1e-05,
+                     'loss_name': 'cross_entropy',
+                     'model_name': 'swin_large_patch4_window7_224.ms_in22k',
+                     'model_params': {'image_size': 224,
+                                      'pretrained': True,
+                                      'trainable_gray2RGB': False},
+                     'num_classes': 5,
+                     'optimizer_type': 'adam'},
+ 'Logger': {'name': 'E04_Swin_LR1e-5',
+            'project': 'ddsm_patch',
+            'save_dir': '/home/eblanov/tmp/logs/E04_Swin_LR1e-5',
+            'type': 'wandb'},
+ 'Trainer': {'max_epochs': 250}}
+Using Swin Transformer model: swin_large_patch4_window7_224.ms_in22k
+Arguments: {'pretrained': True, 'image_size': 224, 'trainable_gray2RGB': False}
+Using CrossEntropy loss
+kwargs:  {}
+Source root:  /home/eblanov/proymam2/Mammography/elsa
+split csv:  resources/ddsm/DDSM_train.csv
+ddsm annotations:  resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+Trainer kwargs:  {'max_epochs': 250}
+Sanity Checking: |          | 0/? [00:00<?, ?it/s]/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/connectors/data_connector.py:476: Your `val_dataloader`'s sampler has shuffling enabled, it is strongly recommended that you turn shuffling off for val/test dataloaders.
+Number of samples after filtering:  1119
+Sanity Checking:   0%|          | 0/2 [00:00<?, ?it/s]Sanity Checking DataLoader 0:   0%|          | 0/2 [00:00<?, ?it/s]Sanity Checking DataLoader 0:  50%|█████     | 1/2 [00:00<00:00,  3.00it/s]Sanity Checking DataLoader 0: 100%|██████████| 2/2 [00:00<00:00,  3.94it/s]                                                                           loading annotations
+Number of annotations:  4664
+Number of annotations after filtering split:  3988
+Number of abnormal annotations:  3988
+Not including normal images
+Number of annotations after filtering OTHER_BENIGN (18 in total)  3970
+Number of classes:  5
+Batch size:  125
+Training: |          | 0/? [00:00<?, ?it/s]Training:   0%|          | 0/64 [00:00<?, ?it/s]Epoch 0:   0%|          | 0/64 [00:00<?, ?it/s] Traceback (most recent call last):
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 510, in <module>
+    trainer.fit(model, data_module)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 561, in fit
+    call._call_and_handle_interrupt(
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 48, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 599, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 1012, in _run
+    results = self._run_stage()
+              ^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 1056, in _run_stage
+    self.fit_loop.run()
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/fit_loop.py", line 216, in run
+    self.advance()
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/fit_loop.py", line 455, in advance
+    self.epoch_loop.run(self._data_fetcher)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 150, in run
+    self.advance(data_fetcher)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 320, in advance
+    batch_output = self.automatic_optimization.run(trainer.optimizers[0], batch_idx, kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 192, in run
+    self._optimizer_step(batch_idx, closure)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 270, in _optimizer_step
+    call._call_lightning_module_hook(
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 176, in _call_lightning_module_hook
+    output = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/core/module.py", line 1302, in optimizer_step
+    optimizer.step(closure=optimizer_closure)
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/core/optimizer.py", line 154, in step
+    step_output = self._strategy.optimizer_step(self._optimizer, closure, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/strategies/strategy.py", line 239, in optimizer_step
+    return self.precision_plugin.optimizer_step(optimizer, model=model, closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/plugins/precision/precision.py", line 123, in optimizer_step
+    return optimizer.step(closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/optimizer.py", line 504, in wrapper
+    out = func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/optimizer.py", line 79, in _use_grad
+    ret = func(self, *args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/optim/adam.py", line 226, in step
+    loss = closure()
+           ^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/plugins/precision/precision.py", line 109, in _wrap_closure
+    closure_result = closure()
+                     ^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 146, in __call__
+    self._result = self.closure(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 131, in closure
+    step_output = self._step_fn()
+                  ^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 319, in _training_step
+    training_step_output = call._call_strategy_hook(trainer, "training_step", *kwargs.values())
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 328, in _call_strategy_hook
+    output = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/pytorch_lightning/strategies/strategy.py", line 391, in training_step
+    return self.lightning_module.training_step(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 160, in training_step
+    logits = self(x)
+             ^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 141, in forward
+    return self.model(x)
+           ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 838, in forward
+    x = self.forward_features(x)
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 830, in forward_features
+    x = self.layers(x)
+        ^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 559, in forward
+    x = self.blocks(x)
+        ^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/models/swin_transformer.py", line 408, in forward
+    x = x + self.drop_path2(self.mlp(self.norm2(x)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/timm/layers/mlp.py", line 44, in forward
+    x = self.fc1(x)
+        ^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 0 has a total capacity of 31.36 GiB of which 236.69 MiB is free. Including non-PyTorch memory, this process has 31.08 GiB memory in use. Of the allocated memory 29.85 GiB is allocated by PyTorch, and 656.24 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mE04_Swin_LR1e-5[0m at: [34mhttps://wandb.ai/eblanov-universitat-polit-cnica-de-val-ncia/ddsm_patch/runs/itoyl6hg[0m
+[1;34mwandb[0m: Find logs at: [1;35m../../../tmp/logs/E04_Swin_LR1e-5/wandb/run-20260514_201328-itoyl6hg/logs[0m
+E04_S3 finalizado.
+
+=== Fase IV-A Swin completada ===

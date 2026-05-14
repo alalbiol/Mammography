@@ -1,0 +1,23 @@
+# Fase IV-A | ResNet50 | LR = 5e-5
+# Hereda de base_config.yaml
+
+Datamodule:
+  patch_size: 224
+
+Logger:
+  name: E04_resnet50_LR5e-5
+
+LightningModule:
+  model_name: resnet50
+  learning_rate: 0.00005
+
+Callbacks:
+  LearningRateMonitor:
+    logging_interval: 'epoch'
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 3
+    dirpath: /home/eblanov/tmp/logs/E04_R3_resnet50_LR5e5
+    filename: best_{epoch}-{val_auroc:.4f}
+    verbose: True

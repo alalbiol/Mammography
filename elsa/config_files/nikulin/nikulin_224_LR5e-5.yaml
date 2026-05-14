@@ -1,0 +1,25 @@
+# Fase IV-A | Nikulin | LR = 5e-5
+# Hereda de base_config.yaml
+
+Datamodule:
+  patch_size: 224
+  convert_to_rgb: False
+  normalize_input: True
+
+Logger:
+  name: E04_nikulin_LR5e-5
+
+LightningModule:
+  model_name: nikulin
+  learning_rate: 0.00005
+
+Callbacks:
+  LearningRateMonitor:
+    logging_interval: 'epoch'
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 3
+    dirpath: /home/eblanov/tmp/logs/E04_N3_nikulin_LR5e-5
+    filename: best_{epoch}-{val_auroc:.4f}
+    verbose: True

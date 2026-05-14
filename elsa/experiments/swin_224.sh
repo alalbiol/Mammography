@@ -12,53 +12,11 @@ else
 fi
 
 # Activate the Mammo environment
-conda activate Mammo
-
-# Your commands here
-echo "Mammo environment activated"
-
+conda activate proymam
+echo "proymam environment activated"
 
 cd ..
 echo "Current working directory: $(pwd)"
-
-#run experiments for resnet18, resnet34, resnet50 with 224x224 patches
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swin_base_patch4_window7_224.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swin_s3_base_224.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swin_s3_small_224.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swin_s3_tiny_224.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swin_tiny_patch4_window7_224.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swinv2_cr_small_224.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swinv2_cr_small_ns_224
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swinv2_cr_tiny_224.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swinv2_cr_tiny_ns_224.yaml
-
-
-#  python train/train.py --config config_files/swin/swin_224.yaml    \
-#              --overrides  config_files/swin/swin_224_variants/swin_base_patch4_window7_224.ms_in22k.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#              --overrides  config_files/swin/swin_224_variants/swin_large_patch4_window7_224.ms_in22k.yaml
-
-# python train/train.py --config config_files/swin/swin_224.yaml    \
-#             --overrides  config_files/swin/swin_224_variants/swin_large_patch4_window7_224.ms_in22k_lora.yaml
 
 python train/train.py --config config_files/swin/swin_224.yaml 
 

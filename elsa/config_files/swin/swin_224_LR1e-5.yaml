@@ -1,0 +1,57 @@
+# Fase IV-A | Swin Transformer | LR = 1e-5
+# Config completo (Swin no usa base_config.yaml + overrides)
+
+General:
+  source_root: /home/eblanov/proymam2/Mammography/elsa
+  gpu_type: "RTX 5090"
+
+Datamodule:
+  num_classes: 5
+  batch_size: 125
+  num_workers: 16
+  pin_memory: True
+  train_set:
+    ddsm_root: /home/Data/mamo/DDSM_png_16bit_1120x896
+    split_csv: resources/ddsm/DDSM_train.csv
+    ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+    patch_size: 224
+    convert_to_rgb: True
+    normalize_input: True
+    include_normals: False
+  val_set:
+    eval_patches_root: /home/Data/mamo/eval_patches_16bits_224_test_nikulin
+
+Logger:
+  type: wandb
+  project: ddsm_patch
+  name: E04_Swin_LR1e-5
+  save_dir: /home/eblanov/tmp/logs/E04_Swin_LR1e-5
+
+LightningModule:
+  model_name: swin_large_patch4_window7_224.ms_in22k
+  model_params:
+    pretrained: True
+    image_size: 224
+    trainable_gray2RGB: False
+  learning_rate: 0.00001
+  optimizer_type: adam
+  num_classes: 5
+  loss_name: cross_entropy
+
+Trainer:
+  max_epochs: 250
+
+Callbacks:
+  LearningRateMonitor:
+    logging_interval: 'epoch'
+  ReduceLROnEpochsCallback:
+    every_n_epochs: 3
+    factor: 0.5
+    min_lr: 1.0e-6
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 3
+    dirpath: /home/eblanov/tmp/logs/E04_Swin_LR1e-5
+    filename: best_{epoch}-{val_auroc:.4f}
+    verbose: True

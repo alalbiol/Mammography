@@ -1,0 +1,180 @@
+nohup: ignoring input
+proymam environment activated
+Working directory: /home/eblanov/proymam2/Mammography/elsa
+
+================================================
+ Lanzando E04_S1 | Swin | LR = 1e-4
+================================================
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/albumentations/__init__.py:28: UserWarning: A new version of Albumentations is available: '2.0.8' (you have '2.0.5'). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.
+  check_for_updates()
+Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+{'Callbacks': {'LearningRateMonitor': {'logging_interval': 'epoch'},
+               'ModelCheckpoint': {'dirpath': '/home/eblanov/tmp/logs/E04_Swin_LR1e-4',
+                                   'filename': 'best_{epoch}-{val_auroc:.4f}',
+                                   'mode': 'max',
+                                   'monitor': 'val_auroc',
+                                   'save_top_k': 3,
+                                   'verbose': True},
+               'ReduceLROnEpochsCallback': {'every_n_epochs': 3,
+                                            'factor': 0.5,
+                                            'min_lr': 5e-06}},
+ 'Datamodule': {'batch_size': 125,
+                'num_classes': 5,
+                'num_workers': 16,
+                'pin_memory': True,
+                'train_set': {'convert_to_rgb': True,
+                              'ddsm_annotations': 'resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz',
+                              'ddsm_root': '/home/Data/mamo/DDSM_png_16bit_1120x896',
+                              'include_normals': False,
+                              'normalize_input': True,
+                              'patch_size': 224,
+                              'split_csv': 'resources/ddsm/DDSM_train.csv'},
+                'val_set': {'eval_patches_root': '/home/Data/mamo/eval_patches_16bits_224_test_nikulin'}},
+ 'General': {'gpu_type': 'RTX 5090',
+             'source_root': '/home/eblanov/proymam2/Mammography/elsa'},
+ 'LightningModule': {'learning_rate': 0.0001,
+                     'loss_name': 'smoothed_cross_entropy',
+                     'loss_params': {'num_classes': 5, 'smoothing': 0.1},
+                     'mixup_alpha': 0.8,
+                     'model_name': 'swin_large_patch4_window7_224.ms_in22k',
+                     'model_params': {'image_size': 224,
+                                      'pretrained': True,
+                                      'trainable_gray2RGB': False},
+                     'num_classes': 5,
+                     'optimizer_type': 'adam'},
+ 'Logger': {'name': 'E04_Swin_LR1e-4',
+            'project': 'ddsm_patch',
+            'save_dir': '/home/eblanov/tmp/logs/E04_Swin_LR1e-4',
+            'type': 'wandb'},
+ 'Trainer': {'max_epochs': 250}}
+Using Swin Transformer model: swin_large_patch4_window7_224.ms_in22k
+Arguments: {'pretrained': True, 'image_size': 224, 'trainable_gray2RGB': False}
+Traceback (most recent call last):
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 484, in <module>
+    model = DDSMPatchClassifier(config=config)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 79, in __init__
+    self.loss_fn = get_loss(self.loss_name, **self.loss_params)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/losses.py", line 36, in get_loss
+    raise ValueError(f"Loss {loss_name} not found.")
+ValueError: Loss smoothed_cross_entropy not found.
+E04_S1 finalizado.
+
+================================================
+ Lanzando E04_S2 | Swin | LR = 5e-5
+================================================
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/albumentations/__init__.py:28: UserWarning: A new version of Albumentations is available: '2.0.8' (you have '2.0.5'). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.
+  check_for_updates()
+{'Callbacks': {'LearningRateMonitor': {'logging_interval': 'epoch'},
+               'ModelCheckpoint': {'dirpath': '/home/eblanov/tmp/logs/E04_Swin_LR5e-5',
+                                   'filename': 'best_{epoch}-{val_auroc:.4f}',
+                                   'mode': 'max',
+                                   'monitor': 'val_auroc',
+                                   'save_top_k': 3,
+                                   'verbose': True},
+               'ReduceLROnEpochsCallback': {'every_n_epochs': 3,
+                                            'factor': 0.5,
+                                            'min_lr': 5e-06}},
+ 'Datamodule': {'batch_size': 125,
+                'num_classes': 5,
+                'num_workers': 16,
+                'pin_memory': True,
+                'train_set': {'convert_to_rgb': True,
+                              'ddsm_annotations': 'resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz',
+                              'ddsm_root': '/home/Data/mamo/DDSM_png_16bit_1120x896',
+                              'include_normals': False,
+                              'normalize_input': True,
+                              'patch_size': 224,
+                              'split_csv': 'resources/ddsm/DDSM_train.csv'},
+                'val_set': {'eval_patches_root': '/home/Data/mamo/eval_patches_16bits_224_test_nikulin'}},
+ 'General': {'gpu_type': 'RTX 5090',
+             'source_root': '/home/eblanov/proymam2/Mammography/elsa'},
+ 'LightningModule': {'learning_rate': 5e-05,
+                     'loss_name': 'smoothed_cross_entropy',
+                     'loss_params': {'num_classes': 5, 'smoothing': 0.1},
+                     'mixup_alpha': 0.8,
+                     'model_name': 'swin_large_patch4_window7_224.ms_in22k',
+                     'model_params': {'image_size': 224,
+                                      'pretrained': True,
+                                      'trainable_gray2RGB': False},
+                     'num_classes': 5,
+                     'optimizer_type': 'adam'},
+ 'Logger': {'name': 'E04_Swin_LR5e-5',
+            'project': 'ddsm_patch',
+            'save_dir': '/home/eblanov/tmp/logs/E04_Swin_LR5e-5',
+            'type': 'wandb'},
+ 'Trainer': {'max_epochs': 250}}
+Using Swin Transformer model: swin_large_patch4_window7_224.ms_in22k
+Arguments: {'pretrained': True, 'image_size': 224, 'trainable_gray2RGB': False}
+Traceback (most recent call last):
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 484, in <module>
+    model = DDSMPatchClassifier(config=config)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 79, in __init__
+    self.loss_fn = get_loss(self.loss_name, **self.loss_params)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/losses.py", line 36, in get_loss
+    raise ValueError(f"Loss {loss_name} not found.")
+ValueError: Loss smoothed_cross_entropy not found.
+E04_S2 finalizado.
+
+================================================
+ Lanzando E04_S3 | Swin | LR = 1e-5
+================================================
+/home/eblanov/miniconda3/envs/proymam/lib/python3.11/site-packages/albumentations/__init__.py:28: UserWarning: A new version of Albumentations is available: '2.0.8' (you have '2.0.5'). Upgrade using: pip install -U albumentations. To disable automatic update checks, set the environment variable NO_ALBUMENTATIONS_UPDATE to 1.
+  check_for_updates()
+{'Callbacks': {'LearningRateMonitor': {'logging_interval': 'epoch'},
+               'ModelCheckpoint': {'dirpath': '/home/eblanov/tmp/logs/E04_S3_swin_lr1e-5',
+                                   'filename': 'best_{epoch}-{val_auroc:.4f}',
+                                   'mode': 'max',
+                                   'monitor': 'val_auroc',
+                                   'save_top_k': 3,
+                                   'verbose': True},
+               'ReduceLROnEpochsCallback': {'every_n_epochs': 3,
+                                            'factor': 0.5,
+                                            'min_lr': 1e-06}},
+ 'Datamodule': {'batch_size': 125,
+                'num_classes': 5,
+                'num_workers': 16,
+                'pin_memory': True,
+                'train_set': {'convert_to_rgb': True,
+                              'ddsm_annotations': 'resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz',
+                              'ddsm_root': '/home/Data/mamo/DDSM_png_16bit_1120x896',
+                              'include_normals': False,
+                              'normalize_input': True,
+                              'patch_size': 224,
+                              'split_csv': 'resources/ddsm/DDSM_train.csv'},
+                'val_set': {'eval_patches_root': '/home/Data/mamo/eval_patches_16bits_224_test_nikulin'}},
+ 'General': {'gpu_type': 'RTX 5090',
+             'source_root': '/home/eblanov/proymam2/Mammography/elsa'},
+ 'LightningModule': {'learning_rate': 1e-05,
+                     'loss_name': 'smoothed_cross_entropy',
+                     'loss_params': {'num_classes': 5, 'smoothing': 0.1},
+                     'mixup_alpha': 0.8,
+                     'model_name': 'swin_large_patch4_window7_224.ms_in22k',
+                     'model_params': {'image_size': 224,
+                                      'pretrained': True,
+                                      'trainable_gray2RGB': False},
+                     'num_classes': 5,
+                     'optimizer_type': 'adam'},
+ 'Logger': {'name': 'E04_swin_lr1e-5',
+            'project': 'ddsm_patch',
+            'save_dir': '/home/eblanov/tmp/logs/E04_swin_lr1e-5',
+            'type': 'wandb'},
+ 'Trainer': {'max_epochs': 250}}
+Using Swin Transformer model: swin_large_patch4_window7_224.ms_in22k
+Arguments: {'pretrained': True, 'image_size': 224, 'trainable_gray2RGB': False}
+Traceback (most recent call last):
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 484, in <module>
+    model = DDSMPatchClassifier(config=config)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/train.py", line 79, in __init__
+    self.loss_fn = get_loss(self.loss_name, **self.loss_params)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eblanov/proymam2/Mammography/elsa/train/losses.py", line 36, in get_loss
+    raise ValueError(f"Loss {loss_name} not found.")
+ValueError: Loss smoothed_cross_entropy not found.
+E04_S3 finalizado.
+
+=== Fase IV-A Swin completada ===
