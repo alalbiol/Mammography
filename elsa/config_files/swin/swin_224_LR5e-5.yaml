@@ -7,7 +7,7 @@ General:
 
 Datamodule:
   num_classes: 5
-  batch_size: 125
+  batch_size: 65
   num_workers: 16
   pin_memory: True
   train_set:
@@ -38,8 +38,10 @@ LightningModule:
   num_classes: 5
   loss_name: cross_entropy
 
+
 Trainer:
   max_epochs: 250
+  accumulate_grad_batches: 2
 
 Callbacks:
   LearningRateMonitor:
