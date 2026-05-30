@@ -3,14 +3,20 @@
 
 Datamodule:
   patch_size: 224
-  convert_to_rgb: False
   normalize_input: True
+  train_set:
+    convert_to_rgb: False
+  val_set:
+    convert_to_rgb: False
 
 Logger:
   name: E04_nikulin_LR5e-5
 
 LightningModule:
   model_name: nikulin
+  num_classes: 5
+  num_classes: 5
+  num_classes: 5
   learning_rate: 0.00005
 
 Callbacks:

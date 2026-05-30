@@ -30,42 +30,42 @@ echo ""
 echo "================================================"
 echo " Lanzando E04_N1 | Nikulin | LR = 1e-3"
 echo "================================================"
-NUM_EPOCHS=250 python train/train.py \
+NUM_EPOCHS=500 python train/train.py \
     --config_file config_files/base_config.yaml \
     --overrides config_files/nikulin/nikulin_224_LR1e-3.yaml \
     --batch_size 125 \
-    --job_name "E04_N1_Nikulin_LR1e-3"
+    --job_name "E04_N1_Nikulin_LR1e-3_550ep"
 
 echo "E04_N1 finalizado."
 
 # ------------------------------------------------------------------
 # E04_N2 | Nikulin | LR = 1e-4
 # ------------------------------------------------------------------
-echo ""
-echo "================================================"
-echo " Lanzando E04_N2 | Nikulin | LR = 1e-4"
-echo "================================================"
-NUM_EPOCHS=250 python train/train.py \
-    --config_file config_files/base_config.yaml \
-    --overrides config_files/nikulin/nikulin_224_LR1e-4.yaml \
-    --batch_size 125 \
-    --job_name "E04_N2_Nikulin_LR1e-4"
+# echo ""
+# echo "================================================"
+# echo " Lanzando E04_N2 | Nikulin | LR = 1e-4"
+# echo "================================================"
+# NUM_EPOCHS=250 python train/train.py \
+#     --config_file config_files/base_config.yaml \
+#     --overrides config_files/nikulin/nikulin_224_LR1e-4.yaml \
+#     --batch_size 125 \
+#     --job_name "E04_N2_Nikulin_LR1e-4"
 
-echo "E04_N2 finalizado."
+# echo "E04_N2 finalizado."
 
 # ------------------------------------------------------------------
 # E04_N3 | Nikulin | LR = 5e-5
 # ------------------------------------------------------------------
-echo ""
-echo "================================================"
-echo " Lanzando E04_N3 | Nikulin | LR = 5e-5"
-echo "================================================"
-NUM_EPOCHS=250 python train/train.py \
-    --config_file config_files/base_config.yaml \
-    --overrides config_files/nikulin/nikulin_224_LR5e-5.yaml \
-    --batch_size 125 \
-    --job_name "E04_N3_Nikulin_LR5e-5"
+# echo ""
+# echo "================================================"
+# echo " Lanzando E04_N3 | Nikulin | LR = 5e-5"
+# echo "================================================"
+# NUM_EPOCHS=250 python train/train.py \
+#     --config_file config_files/base_config.yaml \
+#     --overrides config_files/nikulin/nikulin_224_LR5e-5.yaml \
+#     --batch_size 125 \
+#     --job_name "E04_N3_Nikulin_LR5e-5"
 
-echo "E04_N3 finalizado."
-echo ""
-echo "=== Fase IV-A Nikulin completada ==="
+# echo "E04_N3 finalizado."
+# echo ""
+# echo "=== Fase IV-A Nikulin completada ==="

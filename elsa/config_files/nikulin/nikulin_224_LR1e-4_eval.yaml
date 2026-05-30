@@ -1,0 +1,49 @@
+Callbacks:
+  LearningRateMonitor:
+    logging_interval: epoch
+  ModelCheckpoint:
+    dirpath: /home/eblanov/tmp/logs/E04_N2_nikulin_LR1e-4
+    filename: best_{epoch}-{val_auroc:.4f}
+    mode: max
+    monitor: val_auroc
+    save_top_k: 1
+    verbose: true
+Datamodule:
+  batch_size: 75
+  normalize_input: true
+  num_classes: 5
+  num_workers: 16
+  patch_size: 224
+  train_set:
+    convert_to_rgb: false
+    ddsm_annotations: resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+    ddsm_root: /home/Data/mamo/DDSM_png_16bit_1120x896
+    include_normals: false
+    normalize_input: true
+    patch_size: 224
+    pin_memory: true
+    split_csv: resources/ddsm/DDSM_train.csv
+  val_set:
+    convert_to_rgb: false
+    eval_patches_root: /home/Data/mamo/eval_patches_16bits_224_test_nikulin
+General:
+  gpu_type: RTX 5090
+  source_root: /home/eblanov/proymam2/Mammography/elsa
+LightningModule:
+  learning_rate: 0.0001
+  lr_scheduler: ReduceLROnPlateau
+  lr_scheduler_options:
+    factor: 0.5
+    min_lr: 1.0e-08
+    mode: min
+    patience: 20
+  model_name: nikulin
+  num_classes: 5
+  optimizer_type: adam
+Logger:
+  name: E04_nikulin_LR1e-4
+  project: ddsm_patch
+  save_dir: /home/eblanov/tmp/logs/ddsm_patch_224
+  type: wandb
+Trainer:
+  max_epochs: 50
