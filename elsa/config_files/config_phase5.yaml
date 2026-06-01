@@ -1,0 +1,45 @@
+# ══════════════════════════════════════════════════════
+#  Fase V – Resolución y fusión
+#  eval_fusion.py usa este config
+# ══════════════════════════════════════════════════════
+
+General:
+  source_root: /home/eblanov/proymam2/Mammography/elsa
+  gpu_type: "RTX 5090"
+
+# ── Config del modelo de Fase IV ─────────────────────
+# eval_fusion.py lo usa para reconstruir DDSMPatchClassifier
+Phase4:
+  patch_config: config_files/E04_Swin_LR1e-4.yaml  # apunta al config de Fase IV (ajusta el nombre exacto)
+
+# ── Dataset de imágenes completas ────────────────────
+Datamodule:
+  ddsm_root:          /home/Data/mamo/DDSM_png_16bit_1120x896
+  val_csv:            resources/ddsm/DDSM_val.csv       # CSV con columna 'ddsm_image'
+  ddsm_annotations:   resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+
+  # Tamaño del parche: igual que en entrenamiento
+  patch_size: 224
+
+  # Stride del sliding window.
+  # 224 = sin solapamiento  |  112 = solapamiento 50%  |  56 = solapamiento 75%
+  # Empezar con 112 (equilibrio velocidad / cobertura)
+  stride: 112
+
+  convert_to_rgb:  True
+  normalize_input: True
+
+  # Número de parches que se mandan a GPU a la vez (ajustar según VRAM)
+  mini_batch_size: 128
+
+  num_workers: 8
+
+  # Opcional: limitar nº de imágenes para pruebas rápidas (null = todas)
+  subset_size: null
+
+# ── Logger ───────────────────────────────────────────
+Logger:
+  type: wandb
+  project: ddsm_image_fusion
+  name: E05_fusion_stride112
+  save_dir: /home/eblanov/tmp/logs/E05_fusion_stride112
