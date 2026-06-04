@@ -1,1 +1,4 @@
 wandb/
+*.ckpt
+*.ckpt
+experiments/logs_fase5/

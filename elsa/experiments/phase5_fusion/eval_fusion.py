@@ -179,6 +179,7 @@ def evaluate(ckpt_path: str, config_path: str, sens_target: float = 0.90):
         )
 
     # ── Modelo ──────────────────────────────────────────────────────────────
+    source_root = pathlib.Path(get_parameter(config, ["General", "source_root"], default=""))
     patch_config_path = source_root / get_parameter(config, ["Phase4", "patch_config"])
     patch_config      = load_config(str(patch_config_path))
 
@@ -189,7 +190,6 @@ def evaluate(ckpt_path: str, config_path: str, sens_target: float = 0.90):
     print(f"Modelo cargado desde {ckpt_path}  →  device: {device}")
 
     # ── Dataset + DataLoader ─────────────────────────────────────────────────
-    source_root = pathlib.Path(get_parameter(config, ["General", "source_root"], default=""))
 
     val_csv   = source_root / get_parameter(config, ["Datamodule", "val_csv"])
     annot_gz  = source_root / get_parameter(config, ["Datamodule", "ddsm_annotations"])
