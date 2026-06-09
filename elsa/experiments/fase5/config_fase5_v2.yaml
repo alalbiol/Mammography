@@ -1,13 +1,10 @@
 # ══════════════════════════════════════════════════════════════════════════════
-#  E05_v2 — Fase V con aumentado masivo
+#  E05_v2 — Arquitectura corregida + augmentations moderadas
 #
-#  CAMBIOS RESPECTO A v1 (E05_SwinLarge_NikulinFusion_LR1e-4):
-#    - Augmentations geométricas: rotación ±180°, ElasticTransform, GridDistortion
-#    - Augmentations de intensidad: rango 0.6-1.4 (antes 0.8-1.2)
-#    - RandAugment (n=2, magnitude=9)
-#    - max_steps: ~10000 pasos (indicación de Alberto, antes 100 épocas)
+#  CAMBIOS RESPECTO A v1_fixed:
+#    - Augmentations: igual que v1 + GaussNoise muy suave (0.002, 0.01)
 #
-#  TODO LO DEMÁS IGUAL QUE v1 para poder atribuir cambios al aumentado
+#  Arquitectura: igual que v1_fixed (FF layers, flatten, shortcut 100→2)
 # ══════════════════════════════════════════════════════════════════════════════
 
 General:
@@ -32,7 +29,7 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_image
-  name: E05_v2_AugMasivo
+  name: E05_v2_AugModerado
   save_dir: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
 
 LightningModule:
@@ -48,10 +45,6 @@ LightningModule:
   loss_name: cross_entropy
 
 Trainer:
-  # ~10000 pasos con BS=4, acum=8 → batch efectivo=32
-  # dataset ~1558 cancer + 1558 normal (balanceado) = 3116 imgs/época
-  # pasos/época = 3116/32 ≈ 97 → 10000/97 ≈ 103 épocas
-  # usamos max_steps directamente para ser exactos
   max_steps: 10000
   log_every_n_steps: 5
   precision: 16-mixed
@@ -67,7 +60,7 @@ Callbacks:
   ModelCheckpoint:
     monitor: val_auroc
     mode: max
-    save_top_k: 3
+    save_top_k: 1
     dirpath: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
-    filename: E05v2_{val_auroc:.4f}
+    filename: E05v2_{epoch}-{val_auroc:.4f}
     verbose: True

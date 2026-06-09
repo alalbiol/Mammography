@@ -1,16 +1,10 @@
 # ══════════════════════════════════════════════════════════════════════════════
-#  E05_v3 — Aumentado moderado
+#  E05_v3 — Arquitectura corregida + Dropout(0.3) en NikulinFusion
 #
-#  CAMBIOS RESPECTO A v2:
-#    - Rotación: ±180° → ±20°
-#    - Escala: (0.7,1.3) → (0.75,1.25)
-#    - Shear: ±15 → ±12
-#    - Sin ElasticTransform ni GridDistortion
-#    - Sin RandomBrightnessContrast (triple perturbación de intensidad)
-#    - GaussNoise más suave: std (0.005, 0.02)
-#    - Intensidad: rango 0.7-1.3 (entre v1 y v2)
+#  CAMBIOS RESPECTO A v1_fixed:
+#    - dropout: 0.3 entre cada capa FF del camino principal
 #
-#  TODO LO DEMÁS IGUAL QUE v1 y v2
+#  Augmentations: igual que v1_fixed (las del DDSMImageDataModule original)
 # ══════════════════════════════════════════════════════════════════════════════
 
 General:
@@ -35,7 +29,7 @@ Datamodule:
 Logger:
   type: wandb
   project: ddsm_image
-  name: E05_v3_AugModerado
+  name: E05_v3_Dropout03
   save_dir: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
 
 LightningModule:
@@ -45,6 +39,7 @@ LightningModule:
     freeze_patch_model: True
     unfreeze_layer: 3
     image_size: [896, 1120]
+    dropout: 0.3
   num_classes: 2
   learning_rate: 0.0001
   optimizer_type: adam
