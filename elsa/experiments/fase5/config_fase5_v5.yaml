@@ -1,0 +1,67 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  E05_v5 — Augmentations básicas + RandAugment conservador
+#
+#  CAMBIOS RESPECTO A v1_fixed:
+#    - RandAugment(n=2, magnitude=6) añadido sobre las augmentations básicas
+#
+#  Arquitectura: igual que v1_fixed (sin dropout)
+# ══════════════════════════════════════════════════════════════════════════════
+
+General:
+  source_root: /home/eblanov/proymam2/Mammography/elsa
+  gpu_type: "RTX 5090"
+
+Phase4:
+  patch_config: config_files/swin/swin_224_LR1e-4.yaml
+
+Datamodule:
+  ddsm_root:          /home/Data/mamo/DDSM_png_16bit_1120x896
+  train_csv:          resources/ddsm/DDSM_train.csv
+  val_csv:            resources/ddsm/DDSM_test.csv
+  ddsm_annotations:   resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+  convert_to_rgb:     False
+  return_mask:        True
+  batch_size:         4
+  balanced_patches:   True
+  num_workers:        8
+  use_all_images:     True
+
+Logger:
+  type: wandb
+  project: ddsm_image
+  name: E05_v5_RandAugment
+  save_dir: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
+
+LightningModule:
+  model_name: SwinBreastCancerLarge
+  model_params:
+    patch_checkpoint: /home/eblanov/tmp/logs/E04_Swin_LR1e-4/best_epoch=212-val_auroc=0.9921.ckpt
+    freeze_patch_model: True
+    unfreeze_layer: 3
+    image_size: [896, 1120]
+    dropout: 0.0    # sin dropout, igual que v1_fixed
+  num_classes: 2
+  learning_rate: 0.0001
+  optimizer_type: adam
+  loss_name: cross_entropy
+
+Trainer:
+  max_steps: 10000
+  log_every_n_steps: 5
+  precision: 16-mixed
+  accumulate_grad_batches: 8
+
+Callbacks:
+  LearningRateMonitor:
+    logging_interval: epoch
+  ReduceLROnEpochsCallback:
+    every_n_epochs: 10
+    factor: 0.5
+    min_lr: 2.0e-6
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 1
+    dirpath: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
+    filename: E05v5_{epoch}-{val_auroc:.4f}
+    verbose: True
