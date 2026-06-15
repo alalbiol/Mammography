@@ -505,3 +505,32 @@ class FreezeLoRALayersCallback(Callback):
                 if "lora" in name:
                     param.requires_grad = True
             print(f"Epoch {current_epoch}: LoRA layers unfrozen")
+
+class FreezeSwinPhase5Callback(Callback):
+    """
+    Callback para entrenamiento en dos fases (Fase V):
+
+    Fase 1 (pasos < unfreeze_at_step): Swin completamente congelado,
+                                        solo entrena NikulinFusion.
+                                        Permite que la cabeza se estabilice
+                                        sin corromper las features del Swin.
+
+    Fase 2 (pasos >= unfreeze_at_step): Descongela la layer 3 del Swin
+                                         y reduce el LR por lr_factor para
+                                         un fine-tuning suave.
+    """
+    def __init__(self, unfreeze_at_step=3500, lr_factor=0.1):
+        super().__init__()
+        self.unfreeze_at_step = unfreeze_at_step
+        self.lr_factor = lr_factor
+        self.unfrozen = False
+
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
+        if not self.unfrozen and trainer.global_step >= self.unfreeze_at_step:
+            model = pl_module.model  # SwinBreastCancerLarge
+            for param in model.patch_model[1].layers[3].parameters():
+                param.requires_grad = True
+            for og in trainer.optimizers[0].param_groups:
+                og["lr"] *= self.lr_factor
+            print(f"[FreezeSwinPhase5] Paso {trainer.global_step}: Layer 3 descongelada, LR reducido x{self.lr_factor}")
+            self.unfrozen = True

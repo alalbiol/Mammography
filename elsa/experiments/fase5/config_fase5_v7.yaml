@@ -1,0 +1,70 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  E05_v7 — Entrenamiento en dos fases con FreezeSwinPhase5Callback
+#
+#  Fase 1 (épocas 0-4): Swin completamente congelado, solo NikulinFusion
+#  Fase 2 (épocas 5+) : Layer 3 descongelada, LR reducido x0.1
+#
+#  Motivación (Alberto): NikulinFusion arranca con pesos aleatorios y sus
+#  gradientes iniciales grandes pueden corromper la layer 3 del Swin.
+#  Congelando primero hasta que la cabeza se estabilice evitamos este problema.
+# ══════════════════════════════════════════════════════════════════════════════
+
+General:
+  source_root: /home/eblanov/proymam2/Mammography/elsa
+  gpu_type: "RTX 5090"
+
+Phase4:
+  patch_config: config_files/swin/swin_224_LR1e-4.yaml
+
+Datamodule:
+  ddsm_root:          /home/Data/mamo/DDSM_png_16bit_1120x896
+  train_csv:          resources/ddsm/DDSM_train.csv
+  val_csv:            resources/ddsm/DDSM_test.csv
+  ddsm_annotations:   resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+  convert_to_rgb:     False
+  return_mask:        True
+  batch_size:         4
+  balanced_patches:   True
+  num_workers:        8
+  use_all_images:     True
+
+Logger:
+  type: wandb
+  project: ddsm_image
+  name: E05_v7_FreezePhase5
+  save_dir: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
+
+LightningModule:
+  model_name: SwinBreastCancerLarge
+  model_params:
+    patch_checkpoint: /home/eblanov/tmp/logs/E04_Swin_LR1e-4/best_epoch=212-val_auroc=0.9921.ckpt
+    freeze_patch_model: True
+    unfreeze_layer: null    # El callback gestiona el descongelado
+    image_size: [896, 1120]
+    dropout: 0.0
+  num_classes: 2
+  learning_rate: 0.0001
+  optimizer_type: adam
+  loss_name: cross_entropy
+
+Trainer:
+  max_steps: 10000
+  log_every_n_steps: 5
+  precision: 16-mixed
+  accumulate_grad_batches: 8
+
+# Callback de dos fases
+FreezeSwinPhase5:
+  freeze_epochs: 5    # Épocas con Swin congelado
+  lr_factor: 0.1      # LR se reduce a 1e-5 al descongelar layer 3
+
+Callbacks:
+  LearningRateMonitor:
+    logging_interval: epoch
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 1
+    dirpath: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
+    filename: E05v7_{epoch}-{val_auroc:.4f}
+    verbose: True

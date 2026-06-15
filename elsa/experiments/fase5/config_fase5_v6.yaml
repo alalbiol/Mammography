@@ -1,0 +1,64 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  E05_v6_finetune — Fine-tuning con LR pequeño desde checkpoint v1_fixed
+#
+#  Último pulido (indicación de Alberto):
+#    - Arranca desde el mejor checkpoint (epoch=10, val_auroc=0.8326)
+#    - LR muy pequeño: 1e-5 (10× menor que el entrenamiento original)
+#    - Pocos pasos: 2000
+#    - Todo lo demás igual que v1_fixed
+# ══════════════════════════════════════════════════════════════════════════════
+
+General:
+  source_root: /home/eblanov/proymam2/Mammography/elsa
+  gpu_type: "RTX 5090"
+
+Phase4:
+  patch_config: config_files/swin/swin_224_LR1e-4.yaml
+
+Datamodule:
+  ddsm_root:          /home/Data/mamo/DDSM_png_16bit_1120x896
+  train_csv:          resources/ddsm/DDSM_train.csv
+  val_csv:            resources/ddsm/DDSM_test.csv
+  ddsm_annotations:   resources/ddsm/ddsm_annotations_16bits_1120_896.json.gz
+  convert_to_rgb:     False
+  return_mask:        True
+  batch_size:         4
+  balanced_patches:   True
+  num_workers:        8
+  use_all_images:     True
+
+Logger:
+  type: wandb
+  project: ddsm_image
+  name: E05_v6_Finetune_LR1e-5
+  save_dir: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
+
+LightningModule:
+  model_name: SwinBreastCancerLarge
+  model_params:
+    patch_checkpoint: /home/eblanov/tmp/logs/E04_Swin_LR1e-4/best_epoch=212-val_auroc=0.9921.ckpt
+    freeze_patch_model: True
+    unfreeze_layer: 3
+    image_size: [896, 1120]
+    dropout: 0.0
+  num_classes: 2
+  learning_rate: 0.00001    # 10× menor que v1_fixed
+  optimizer_type: adam
+  loss_name: cross_entropy
+
+Trainer:
+  max_epochs: 15
+  log_every_n_steps: 5
+  precision: 16-mixed
+  accumulate_grad_batches: 8
+
+Callbacks:
+  LearningRateMonitor:
+    logging_interval: epoch
+  ModelCheckpoint:
+    monitor: val_auroc
+    mode: max
+    save_top_k: 1
+    dirpath: /home/eblanov/proymam2/Mammography/elsa/experiments/logs_fase5
+    filename: E05v6_{epoch}-{val_auroc:.4f}
+    verbose: True

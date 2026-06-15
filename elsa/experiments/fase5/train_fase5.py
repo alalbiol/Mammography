@@ -28,6 +28,7 @@ from train.train_image import (
 
 from utils.load_config import load_config, get_parameter
 from utils.utils import str_to_bool
+from utils.callbacks import FreezeSwinPhase5Callback
 
 import torch
 import pytorch_lightning as pl
@@ -41,6 +42,8 @@ if __name__ == "__main__":
     parser.add_argument("--logger",      type=str_to_bool, default=True)
     parser.add_argument("--task",        type=str, default="train",
                         choices=["train", "validate", "test"])
+    parser.add_argument("--ckpt_path",   type=str, default=None,
+                        help="Checkpoint desde el que reanudar el entrenamiento")
     args = parser.parse_args()
 
     config = load_config(args.config_file, override_file=args.overrides)
@@ -53,6 +56,9 @@ if __name__ == "__main__":
     data_module = DDSMImageDataModule(config=config)
     logger      = get_logger(config) if args.logger else None
     callbacks   = create_callbacks(config)
+    freeze_cfg = config.get("FreezeSwinPhase5", None)
+    if freeze_cfg is not None:
+        callbacks.append(FreezeSwinPhase5Callback(**freeze_cfg))
 
     trainer_kwargs = get_parameter(config, ["Trainer"], mode="default", default={})
     trainer = pl.Trainer(
@@ -63,7 +69,7 @@ if __name__ == "__main__":
     )
 
     if args.task == "train":
-        trainer.fit(model, data_module)
+        trainer.fit(model, data_module, ckpt_path=args.ckpt_path)
     elif args.task == "validate":
         trainer.validate(model, data_module)
     elif args.task == "test":
