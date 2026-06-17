@@ -1394,15 +1394,14 @@ class DDSMImageDataModule(pl.LightningDataModule):
                                         return_mask=self.return_mask,
                                         use_all_images=True)  
         else:
-            raise NotImplementedError("Mixup not implemented")
-            # dataset = DDSM_Image_Dataset_mixup(self.train_csv, self.ddsm_annotations, self.ddsm_root, 
-            #                             convert_to_rgb=False, 
-            #                             subset_size=self.subset_size_train, random_seed=self.random_seed,
-            #                             geometrical_transform=geometrical_transform,
-            #                             intensity_transform=intensity_transform,
-            #                             return_mask=self.return_mask,
-            #                             mixup_alpha=self.mixup_alpha,
-            #                             use_all_images=True)
+            dataset = DDSM_Image_Dataset_mixup(self.train_csv, self.ddsm_annotations, self.ddsm_root,
+                                        convert_to_rgb=False,
+                                        subset_size=self.subset_size_train, random_seed=self.random_seed,
+                                        geometrical_transform=geometrical_transform,
+                                        intensity_transform=intensity_transform,
+                                        return_mask=self.return_mask,
+                                        mixup_alpha=self.mixup_alpha,
+                                        use_all_images=True)
         
         if self.balanced_patches:
             print("Using balanced batch sampler")

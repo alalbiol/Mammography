@@ -127,27 +127,22 @@ class DDSMImageClassifier(pl.LightningModule):
         y = batch[1]
                 
         #check if mixup is enabled
-        if  isinstance(y, list): # mixup is enabled
+        if isinstance(y, (list, tuple)): # mixup is enabled
             y_a, y_b, lam = y
-            
-            y = torch.where(lam > 0.5, y_a, y_b)
+            lam = lam.float()
             logits = self(x)
-            loss = lam * self.loss_fn(logits, y_a) + (1 - lam) * self.loss_fn(logits, y_b)
-        else:        
+            loss = (lam * self.loss_fn(logits, y_a) + (1 - lam) * self.loss_fn(logits, y_b)).mean()
+            y = torch.where(lam > 0.5, y_a, y_b)  # etiqueta dura para métricas
+        else:
             logits = self(x)
             loss = self.loss_fn(logits, y)
-        
-        
-        
+
         preds = torch.argmax(logits, dim=1)
-                
         acc = self.train_accuracy(preds, y)
-        self.log("train_acc", acc, prog_bar=True)       
-                
+        self.log("train_acc", acc, prog_bar=True)
+
         preds = torch.argmax(logits, dim=1)
         self.train_confusion_matrix(preds, y)
-        
-        loss = self.loss_fn(logits, y)
         self.log("train_loss", loss)
         
         
